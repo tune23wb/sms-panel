@@ -123,7 +123,7 @@ export default function DashboardLayout({
             <Button
               variant="ghost"
               className="w-full justify-start text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-50"
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={() => signOut({ callbackUrl: isAdmin ? "/admin/login" : "/login" })}
             >
               <LogOut className="mr-2 h-4 w-4" />
               Log out
