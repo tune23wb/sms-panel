@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { z } from "zod"
+import { spawn } from "child_process"
+import { promisify } from "util"
+import { exec } from "child_process"
 
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
@@ -12,6 +15,8 @@ const messageSchema = z.object({
 const sendSMSSchema = z.object({
   messages: z.array(messageSchema),
 })
+
+const execAsync = promisify(exec)
 
 export async function POST(req: Request) {
   try {
@@ -28,21 +33,50 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { messages } = sendSMSSchema.parse(body)
 
-    // TODO: Integrate with your SMS provider here
-    // This is a placeholder that simulates sending SMS
-    console.log("Sending bulk SMS:", {
-      messageCount: messages.length,
-      userId: session.user.id,
-      messages: messages.map(m => ({
-        to: m.number,
-        message: m.message
-      }))
-    })
+    // Process each message
+    const results = await Promise.all(
+      messages.map(async (message) => {
+        try {
+          // Call the Python SMPP service script
+          const { stdout, stderr } = await execAsync(
+            `python3 services/smpp/smpp_service.py --destination "${message.number}" --message "${message.message}"`
+          )
 
-    // For now, we'll just return success
+          if (stderr) {
+            console.error(`Error sending SMS to ${message.number}:`, stderr)
+            return {
+              number: message.number,
+              success: false,
+              error: stderr
+            }
+          }
+
+          return {
+            number: message.number,
+            success: true,
+            message: stdout.trim()
+          }
+        } catch (error) {
+          console.error(`Failed to send SMS to ${message.number}:`, error)
+          return {
+            number: message.number,
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error"
+          }
+        }
+      })
+    )
+
+    // Count successful and failed messages
+    const successful = results.filter(r => r.success).length
+    const failed = results.filter(r => !r.success).length
+
     return NextResponse.json({
       success: true,
-      count: messages.length,
+      total: messages.length,
+      successful,
+      failed,
+      results
     })
   } catch (error) {
     console.error("SMS send error:", error)
