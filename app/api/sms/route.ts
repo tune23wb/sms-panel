@@ -2,9 +2,21 @@ import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(request: Request) {
     try {
+        // Check authentication
+        const session = await getServerSession(authOptions);
+        if (!session) {
+            console.error('Unauthorized access attempt');
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         const body = await request.json();
         const { destination, message, source_addr } = body;
 
@@ -23,6 +35,7 @@ export async function POST(request: Request) {
         
         console.log('Python script path:', scriptPath);
         console.log('Virtual env Python path:', venvPythonPath);
+        console.log('User attempting to send SMS:', session.user.email);
 
         // Check if script exists
         if (!fs.existsSync(scriptPath)) {
