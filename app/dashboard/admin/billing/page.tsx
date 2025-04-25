@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -8,56 +8,40 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CreditCard, Download, Plus, Search } from "lucide-react"
-
-// Sample billing data
-const billingHistory = [
-  {
-    id: 1,
-    date: "2024-03-15",
-    description: "Monthly Subscription",
-    amount: 99.99,
-    status: "Paid",
-    invoice: "INV-2024-001",
-  },
-  {
-    id: 2,
-    date: "2024-02-15",
-    description: "Monthly Subscription",
-    amount: 99.99,
-    status: "Paid",
-    invoice: "INV-2024-002",
-  },
-  {
-    id: 3,
-    date: "2024-01-15",
-    description: "Monthly Subscription",
-    amount: 99.99,
-    status: "Paid",
-    invoice: "INV-2024-003",
-  },
-  {
-    id: 4,
-    date: "2023-12-15",
-    description: "Monthly Subscription",
-    amount: 99.99,
-    status: "Paid",
-    invoice: "INV-2023-012",
-  },
-  {
-    id: 5,
-    date: "2023-11-15",
-    description: "Monthly Subscription",
-    amount: 99.99,
-    status: "Paid",
-    invoice: "INV-2023-011",
-  },
-]
+import { useToast } from "@/components/ui/use-toast"
 
 export default function AdminBillingPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [billingData, setBillingData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
 
-  const filteredBillingHistory = billingHistory.filter((item) => {
+  useEffect(() => {
+    const fetchBillingData = async () => {
+      try {
+        const response = await fetch("/api/admin/billing")
+        if (!response.ok) {
+          throw new Error("Failed to fetch billing data")
+        }
+        const data = await response.json()
+        setBillingData(data)
+      } catch (error) {
+        console.error("Error fetching billing data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load billing data",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBillingData()
+  }, [toast])
+
+  const filteredBillingHistory = (billingData?.transactions || []).filter((item: any) => {
     const matchesSearch = 
       item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.invoice.toLowerCase().includes(searchQuery.toLowerCase())
@@ -66,6 +50,10 @@ export default function AdminBillingPage() {
     
     return matchesSearch && matchesStatus
   })
+
+  if (loading) {
+    return <div className="flex-1 space-y-4 p-8 pt-6">Loading...</div>
+  }
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -98,8 +86,8 @@ export default function AdminBillingPage() {
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">$45,231.89</div>
-                <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+                <div className="text-2xl font-bold">${billingData?.totalRevenue.toFixed(2) || "0.00"}</div>
+                <p className="text-xs text-muted-foreground">{billingData?.revenueGrowth > 0 ? "+" : ""}{billingData?.revenueGrowth.toFixed(1)}% from last month</p>
               </CardContent>
             </Card>
             <Card>
@@ -108,8 +96,8 @@ export default function AdminBillingPage() {
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">1,284</div>
-                <p className="text-xs text-muted-foreground">+12% from last month</p>
+                <div className="text-2xl font-bold">{billingData?.activeSubscriptions || 0}</div>
+                <p className="text-xs text-muted-foreground">{billingData?.subscriptionGrowth > 0 ? "+" : ""}{billingData?.subscriptionGrowth.toFixed(1)}% from last month</p>
               </CardContent>
             </Card>
             <Card>
@@ -118,8 +106,8 @@ export default function AdminBillingPage() {
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">$2,345.67</div>
-                <p className="text-xs text-muted-foreground">-5% from last month</p>
+                <div className="text-2xl font-bold">${billingData?.pendingPayments.toFixed(2) || "0.00"}</div>
+                <p className="text-xs text-muted-foreground">{billingData?.pendingGrowth > 0 ? "+" : ""}{billingData?.pendingGrowth.toFixed(1)}% from last month</p>
               </CardContent>
             </Card>
             <Card>
@@ -128,8 +116,8 @@ export default function AdminBillingPage() {
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">$35.23</div>
-                <p className="text-xs text-muted-foreground">+8% from last month</p>
+                <div className="text-2xl font-bold">${billingData?.averageRevenuePerUser.toFixed(2) || "0.00"}</div>
+                <p className="text-xs text-muted-foreground">{billingData?.arpuGrowth > 0 ? "+" : ""}{billingData?.arpuGrowth.toFixed(1)}% from last month</p>
               </CardContent>
             </Card>
           </div>

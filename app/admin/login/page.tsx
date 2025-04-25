@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
       })
 
       if (!result?.ok) {
-        throw new Error(result?.error || "Invalid credentials")
+        throw new Error(result?.error || "Invalid email or password")
       }
 
       // Verify if the user is an admin

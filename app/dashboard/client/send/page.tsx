@@ -24,23 +24,29 @@ export default function SendSMS() {
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    console.log('Attempting to send SMS:', { phoneNumber, messageLength });
 
     try {
-      const response = await fetch("/api/sms", {
+      console.log('Making API request...');
+      const response = await fetch("/api/sms/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          destination: phoneNumber,
-          message: message,
+          messages: [{
+            number: phoneNumber,
+            message: message,
+          }],
         }),
       })
 
+      console.log('API response status:', response.status);
       const data = await response.json()
+      console.log('API response data:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to send SMS")
+        throw new Error(data.error || data.details || "Failed to send SMS")
       }
 
       setIsSent(true)
@@ -59,6 +65,7 @@ export default function SendSMS() {
         setIsSent(false)
       }, 3000)
     } catch (error) {
+      console.error('Error in handleSendMessage:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to send SMS",

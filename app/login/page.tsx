@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -57,7 +56,7 @@ export default function LoginPage() {
       })
 
       if (!result?.ok) {
-        throw new Error("Invalid credentials")
+        throw new Error(result?.error || "Invalid email or password")
       }
 
       // Verify if the user is an admin
@@ -77,6 +76,7 @@ export default function LoginPage() {
       }
       router.refresh()
     } catch (error) {
+      console.error("Login error:", error)
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Something went wrong",
@@ -141,17 +141,6 @@ export default function LoginPage() {
             </Card>
           </form>
         </Form>
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link
-              href="/register"
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              Sign up
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   )

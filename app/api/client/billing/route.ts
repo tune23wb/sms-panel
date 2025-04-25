@@ -31,11 +31,28 @@ export async function GET() {
       )
     }
 
+    console.log('User pricing tier:', user.pricingTier)
+
     // Get current tier and next tier information
     const currentTier = defaultPricingTiers.find(tier => tier.id === user.pricingTier)
+    console.log('Found current tier:', currentTier)
+
+    if (!currentTier) {
+      console.error('No matching tier found for:', user.pricingTier)
+      // Fallback to standard tier if no match found
+      return NextResponse.json({
+        balance: user.balance,
+        pricePerSMS: defaultPricingTiers[0].pricePerSMS,
+        currentTier: defaultPricingTiers[0],
+        nextTier: defaultPricingTiers[1] || null,
+        transactions: [],
+        invoices: []
+      })
+    }
+
     const nextTier = defaultPricingTiers
       .sort((a, b) => a.minVolume - b.minVolume)
-      .find(tier => tier.minVolume > (currentTier?.minVolume || 0))
+      .find(tier => tier.minVolume > (currentTier.minVolume || 0))
 
     // Get user's transactions
     const transactions = await prisma.message.findMany({
@@ -64,15 +81,15 @@ export async function GET() {
       id: t.id,
       createdAt: t.createdAt,
       type: "Usage",
-      amount: -(currentTier?.pricePerSMS || defaultPricingTiers[0].pricePerSMS),
+      amount: -currentTier.pricePerSMS,
       description: `SMS sent${t.campaign ? ` (${t.campaign.name})` : ""}`,
       status: t.status
     }))
 
     return NextResponse.json({
       balance: user.balance,
-      pricePerSMS: currentTier?.pricePerSMS || defaultPricingTiers[0].pricePerSMS,
-      currentTier: currentTier || defaultPricingTiers[0],
+      pricePerSMS: currentTier.pricePerSMS,
+      currentTier: currentTier,
       nextTier: nextTier || null,
       transactions: formattedTransactions,
       invoices: [] // Placeholder for future invoice functionality
