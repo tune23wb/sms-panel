@@ -4,7 +4,7 @@ import json
 
 def test_sms_api():
     # API endpoint
-    url = "http://localhost:3000/api/sms"  # Adjust the port if needed
+    url = "http://127.0.0.1:3000/api/sms"  # Using localhost IP
     
     # Test data
     data = {
