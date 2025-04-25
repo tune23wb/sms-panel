@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { FormEvent } from "react"
 import { useState } from "react"
 import { Check, Loader2, Send, Upload, Users } from "lucide-react"
@@ -28,7 +29,11 @@ export default function SendSMS() {
 
     try {
       console.log('Making API request...');
+<<<<<<< Updated upstream
       const response = await fetch("/api/sms/send", {
+=======
+      const response = await fetch("/api/sms", {
+>>>>>>> Stashed changes
         method: "POST",
         headers: {
           "Content-Type": "application/json",
