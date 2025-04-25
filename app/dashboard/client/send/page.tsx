@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-
+import { FormEvent } from "react"
 import { useState } from "react"
 import { Check, Loader2, Send, Upload, Users } from "lucide-react"
 
@@ -12,26 +11,62 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function SendSMS() {
+  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [isSent, setIsSent] = useState(false)
   const [messageLength, setMessageLength] = useState(0)
+  const [phoneNumber, setPhoneNumber] = useState("")
+  const [message, setMessage] = useState("")
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate sending message
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      const response = await fetch("/api/sms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          destination: phoneNumber,
+          message: message,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send SMS")
+      }
+
       setIsSent(true)
+      toast({
+        title: "Success",
+        description: "Message sent successfully",
+      })
+
+      // Reset form
+      setPhoneNumber("")
+      setMessage("")
+      setMessageLength(0)
 
       // Reset success state after 3 seconds
       setTimeout(() => {
         setIsSent(false)
       }, 3000)
-    }, 1500)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send SMS",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -57,7 +92,13 @@ export default function SendSMS() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="recipient">Recipient Phone Number</Label>
-                  <Input id="recipient" placeholder="+1 (555) 123-4567" required />
+                  <Input 
+                    id="recipient" 
+                    placeholder="+1 (555) 123-4567" 
+                    required 
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -69,7 +110,11 @@ export default function SendSMS() {
                     placeholder="Type your message here..."
                     className="min-h-[120px]"
                     required
-                    onChange={(e) => setMessageLength(e.target.value.length)}
+                    value={message}
+                    onChange={(e) => {
+                      setMessage(e.target.value)
+                      setMessageLength(e.target.value.length)
+                    }}
                     maxLength={160}
                   />
                 </div>
