@@ -1,10 +1,49 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BarChart3, Users, MessageSquare, CreditCard, TrendingUp, AlertCircle } from "lucide-react"
+import { BarChart3, Users, MessageSquare, TrendingUp, AlertCircle } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
+
+interface AnalyticsData {
+  messageVolume: Array<{ date: string; count: number }>
+  messageStatuses: Array<{ status: string; _count: number }>
+  activeUsers: number
+  successRate: number
+  failedMessages: number
+  totalMessages: number
+}
 
 export default function AdminAnalyticsPage() {
+  const { toast } = useToast()
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const response = await fetch("/api/admin/analytics")
+        if (!response.ok) {
+          throw new Error("Failed to fetch analytics")
+        }
+        const data = await response.json()
+        setAnalytics(data)
+      } catch (error) {
+        console.error("Error fetching analytics:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load analytics data",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAnalytics()
+  }, [toast])
+
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
@@ -16,7 +55,6 @@ export default function AdminAnalyticsPage() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="messages">Messages</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="revenue">Revenue</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -27,8 +65,10 @@ export default function AdminAnalyticsPage() {
                 <MessageSquare className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">45,231</div>
-                <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : analytics?.totalMessages.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground">All time messages sent</p>
               </CardContent>
             </Card>
             <Card>
@@ -37,8 +77,10 @@ export default function AdminAnalyticsPage() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">1,284</div>
-                <p className="text-xs text-muted-foreground">+12% from last month</p>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : analytics?.activeUsers.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground">Last 30 days</p>
               </CardContent>
             </Card>
             <Card>
@@ -47,8 +89,10 @@ export default function AdminAnalyticsPage() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">98.5%</div>
-                <p className="text-xs text-muted-foreground">+0.5% from last month</p>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : `${analytics?.successRate.toFixed(1)}%`}
+                </div>
+                <p className="text-xs text-muted-foreground">Message delivery rate</p>
               </CardContent>
             </Card>
             <Card>
@@ -57,8 +101,10 @@ export default function AdminAnalyticsPage() {
                 <AlertCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">231</div>
-                <p className="text-xs text-muted-foreground">-5% from last month</p>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : analytics?.failedMessages.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground">Total failed messages</p>
               </CardContent>
             </Card>
           </div>
@@ -71,20 +117,29 @@ export default function AdminAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px] w-full bg-muted rounded-md flex items-end justify-between p-4">
-                  {[40, 60, 50, 75, 60, 90, 70, 80, 65, 75, 85, 90, 70, 80, 65, 75, 85, 90, 70, 80, 65, 75, 85, 90, 70, 80, 65, 75, 85, 90].map((height, i) => (
-                    <div key={i} className="relative h-full w-6 flex flex-col justify-end">
-                      <div
-                        className="bg-primary rounded-sm w-full transition-all duration-500"
-                        style={{ height: `${height}%` }}
-                      ></div>
-                      <span className="text-xs text-muted-foreground mt-2">
-                        {i + 1}
-                      </span>
-                    </div>
-                  ))}
+                  {loading ? (
+                    <div className="flex items-center justify-center w-full">Loading...</div>
+                  ) : (
+                    analytics?.messageVolume.map((day, i) => {
+                      const maxCount = Math.max(...analytics.messageVolume.map(d => d.count))
+                      const height = maxCount === 0 ? 0 : (day.count / maxCount) * 100
+                      return (
+                        <div key={i} className="relative h-full w-6 flex flex-col justify-end">
+                          <div
+                            className="bg-primary rounded-sm w-full transition-all duration-500"
+                            style={{ height: `${height}%` }}
+                          ></div>
+                          <span className="text-xs text-muted-foreground mt-2">
+                            {new Date(day.date).getDate()}
+                          </span>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
               </CardContent>
             </Card>
+
             <Card className="col-span-3">
               <CardHeader>
                 <CardTitle>Message Status Distribution</CardTitle>
@@ -92,26 +147,23 @@ export default function AdminAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
-                  <div className="grid grid-cols-2 gap-4 w-full p-4">
-                    <div className="flex flex-col items-center">
-                      <div className="w-32 h-32 rounded-full bg-green-100 flex items-center justify-center">
-                        <span className="text-2xl font-bold text-green-800">85%</span>
-                      </div>
-                      <span className="mt-2 text-sm font-medium">Delivered</span>
+                  {loading ? (
+                    <div>Loading...</div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4 w-full p-4">
+                      {analytics?.messageStatuses.map((status, index) => {
+                        const percentage = (status._count / analytics.totalMessages) * 100
+                        return (
+                          <div key={index} className="flex flex-col items-center">
+                            <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-2xl font-bold">{percentage.toFixed(1)}%</span>
+                            </div>
+                            <span className="mt-2 text-sm font-medium capitalize">{status.status.toLowerCase()}</span>
+                          </div>
+                        )
+                      })}
                     </div>
-                    <div className="flex flex-col items-center">
-                      <div className="w-32 h-32 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-2xl font-bold text-blue-800">10%</span>
-                      </div>
-                      <span className="mt-2 text-sm font-medium">Sent</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <div className="w-32 h-32 rounded-full bg-red-100 flex items-center justify-center">
-                        <span className="text-2xl font-bold text-red-800">5%</span>
-                      </div>
-                      <span className="mt-2 text-sm font-medium">Failed</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -141,20 +193,6 @@ export default function AdminAnalyticsPage() {
             <CardContent>
               <div className="h-[400px] w-full bg-muted rounded-md flex items-center justify-center">
                 <p className="text-muted-foreground">User analytics content will be displayed here</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="revenue" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Revenue Analytics</CardTitle>
-              <CardDescription>Revenue trends and projections</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[400px] w-full bg-muted rounded-md flex items-center justify-center">
-                <p className="text-muted-foreground">Revenue analytics content will be displayed here</p>
               </div>
             </CardContent>
           </Card>
