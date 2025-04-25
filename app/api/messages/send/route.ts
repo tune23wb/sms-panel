@@ -1,7 +1,6 @@
 import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import { z } from "zod"
-
 import { prisma } from "@/lib/prisma"
 
 const messageSchema = z.object({
@@ -64,19 +63,29 @@ export async function POST(req: Request) {
     })
 
     try {
-      // TODO: Integrate with SMS provider
-      // This is where you would integrate with your chosen SMS provider
-      // For now, we'll simulate a successful send
-      
-      // Update message status to SENT
+      // Simulate SMS sending process
+      // First update to SENT status
       await prisma.message.update({
-        where: {
-          id: message.id
-        },
-        data: {
-          status: "SENT"
-        }
+        where: { id: message.id },
+        data: { status: "SENT" }
       })
+
+      // Simulate delivery delay and status update
+      setTimeout(async () => {
+        try {
+          // Simulate 95% success rate
+          const isDelivered = Math.random() < 0.95
+
+          await prisma.message.update({
+            where: { id: message.id },
+            data: {
+              status: isDelivered ? "DELIVERED" : "FAILED"
+            }
+          })
+        } catch (error) {
+          console.error("Error updating message status:", error)
+        }
+      }, 5000) // 5 second delay
 
       // Deduct balance (assuming 1 credit per message)
       await prisma.user.update({
@@ -93,7 +102,9 @@ export async function POST(req: Request) {
       return NextResponse.json({
         message: {
           id: message.id,
-          status: "SENT"
+          status: "SENT",
+          content,
+          recipient
         }
       })
     } catch (error) {

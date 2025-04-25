@@ -34,34 +34,37 @@ export default function OverviewPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch("/api/admin/metrics")
-        if (!response.ok) {
-          throw new Error("Failed to fetch stats")
-        }
-        const data = await response.json()
-        setStats({
-          totalMessages: data.totalMessages,
-          deliveryRate: data.deliveryRate,
-          messageGrowth: data.messageGrowth,
-          recentMessages: [] // TODO: Implement recent messages endpoint
-        })
-      } catch (error) {
-        console.error("Error fetching stats:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard stats",
-          variant: "destructive"
-        })
-      } finally {
-        setLoading(false)
+  const fetchStats = async () => {
+    try {
+      const response = await fetch("/api/admin/metrics")
+      if (!response.ok) {
+        throw new Error("Failed to fetch stats")
       }
+      const data = await response.json()
+      setStats({
+        totalMessages: data.totalMessages,
+        deliveryRate: data.deliveryRate,
+        messageGrowth: data.messageGrowth,
+        recentMessages: data.recentMessages || []
+      })
+    } catch (error) {
+      console.error("Error fetching stats:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard stats",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchStats()
-  }, [toast])
+    // Set up polling every 10 seconds
+    const interval = setInterval(fetchStats, 10000)
+    return () => clearInterval(interval)
+  }, [])
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {

@@ -16,29 +16,32 @@ export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const response = await fetch("/api/admin/analytics")
-        if (!response.ok) {
-          throw new Error("Failed to fetch analytics")
-        }
-        const data = await response.json()
-        setAnalytics(data)
-      } catch (error) {
-        console.error("Error fetching analytics:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load analytics data",
-          variant: "destructive"
-        })
-      } finally {
-        setLoading(false)
+  const fetchAnalytics = async () => {
+    try {
+      const response = await fetch("/api/admin/analytics")
+      if (!response.ok) {
+        throw new Error("Failed to fetch analytics")
       }
+      const data = await response.json()
+      setAnalytics(data)
+    } catch (error) {
+      console.error("Error fetching analytics:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load analytics data",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchAnalytics()
-  }, [toast])
+    // Set up polling every 10 seconds
+    const interval = setInterval(fetchAnalytics, 10000)
+    return () => clearInterval(interval)
+  }, [])
 
   const messageData = {
     labels: analytics?.messageVolume.map(m => m.date) || [],
