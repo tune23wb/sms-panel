@@ -17,9 +17,12 @@ export async function POST(request: Request) {
             );
         }
 
-        // Path to the Python script
+        // Path to the Python script and virtual environment
         const scriptPath = path.join(process.cwd(), 'services', 'smpp', 'smpp_service.py');
+        const venvPythonPath = '/var/www/sms-panel-app/venv/bin/python3';
+        
         console.log('Python script path:', scriptPath);
+        console.log('Virtual env Python path:', venvPythonPath);
 
         // Check if script exists
         if (!fs.existsSync(scriptPath)) {
@@ -30,42 +33,30 @@ export async function POST(request: Request) {
             );
         }
 
-        // Try different Python executable names
-        const pythonExecutables = ['python3', 'python', 'py'];
-        let pythonProcess = null;
-        let pythonError = null;
-
-        for (const pythonExe of pythonExecutables) {
-            try {
-                pythonProcess = spawn(pythonExe, [
-                    scriptPath,
-                    '--destination', destination,
-                    '--message', message,
-                    '--source', source_addr || 'TestSMPP'
-                ]);
-                break;
-            } catch (err) {
-                pythonError = err;
-                console.log(`Failed to spawn process with ${pythonExe}, trying next...`);
-            }
-        }
-
-        if (!pythonProcess) {
-            console.error('Failed to start Python process with any executable:', pythonError);
+        // Check if venv Python exists
+        if (!fs.existsSync(venvPythonPath)) {
+            console.error('Virtual environment Python not found at:', venvPythonPath);
             return NextResponse.json(
-                { error: 'Failed to start SMS service' },
+                { error: 'Python environment not found' },
                 { status: 500 }
             );
         }
 
+        console.log('Spawning Python process with args:', {
+            destination,
+            message: message.substring(0, 20) + '...', // Log first 20 chars for privacy
+            source: source_addr || 'TestSMPP'
+        });
+
+        const pythonProcess = spawn(venvPythonPath, [
+            scriptPath,
+            '--destination', destination,
+            '--message', message,
+            '--source', source_addr || 'TestSMPP'
+        ]);
+
         // Create a promise to handle the Python script execution
         const sendSMS = new Promise((resolve, reject) => {
-            console.log('Spawning Python process with args:', {
-                destination,
-                message: message.substring(0, 20) + '...', // Log first 20 chars for privacy
-                source: source_addr || 'TestSMPP'
-            });
-
             let output = '';
             let error = '';
 
