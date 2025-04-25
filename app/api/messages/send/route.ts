@@ -52,47 +52,62 @@ export async function POST(req: Request) {
       )
     }
 
-    // Create message
+    // Create message with initial status
     const message = await prisma.message.create({
       data: {
         content,
-        recipient,
+        phoneNumber: recipient,
         userId: user.id,
         campaignId,
-        status: "PENDING" // Will be updated by SMS provider webhook
+        status: "PENDING"
       }
     })
 
-    // TODO: Integrate with SMS provider
-    // This is where you would integrate with your chosen SMS provider
-    // For now, we'll simulate a successful send
-    await prisma.message.update({
-      where: {
-        id: message.id
-      },
-      data: {
-        status: "SENT"
-      }
-    })
-
-    // Deduct balance (assuming 1 credit per message)
-    await prisma.user.update({
-      where: {
-        id: user.id
-      },
-      data: {
-        balance: {
-          decrement: 1
+    try {
+      // TODO: Integrate with SMS provider
+      // This is where you would integrate with your chosen SMS provider
+      // For now, we'll simulate a successful send
+      
+      // Update message status to SENT
+      await prisma.message.update({
+        where: {
+          id: message.id
+        },
+        data: {
+          status: "SENT"
         }
-      }
-    })
+      })
 
-    return NextResponse.json({
-      message: {
-        id: message.id,
-        status: "SENT"
-      }
-    })
+      // Deduct balance (assuming 1 credit per message)
+      await prisma.user.update({
+        where: {
+          id: user.id
+        },
+        data: {
+          balance: {
+            decrement: 1
+          }
+        }
+      })
+
+      return NextResponse.json({
+        message: {
+          id: message.id,
+          status: "SENT"
+        }
+      })
+    } catch (error) {
+      // If sending fails, update message status to FAILED
+      await prisma.message.update({
+        where: {
+          id: message.id
+        },
+        data: {
+          status: "FAILED"
+        }
+      })
+      throw error
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
