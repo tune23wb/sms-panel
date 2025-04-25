@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CreditCard, Download, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -10,20 +10,41 @@ import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatMXN } from "@/components/pricing-tiers"
-
-// Sample transaction data
-const transactions = [
-  { id: 1, date: "2023-04-15", type: "Payment", amount: 1000, description: "Account recharge", balance: 1000 },
-  { id: 2, date: "2023-04-16", type: "Usage", amount: -70, description: "100 SMS sent", balance: 930 },
-  { id: 3, date: "2023-04-18", type: "Usage", amount: -140, description: "200 SMS sent", balance: 790 },
-  { id: 4, date: "2023-04-20", type: "Usage", amount: -35, description: "50 SMS sent", balance: 755 },
-  { id: 5, date: "2023-04-25", type: "Payment", amount: 500, description: "Account recharge", balance: 1255 },
-  { id: 6, date: "2023-04-28", type: "Usage", amount: -280, description: "400 SMS sent", balance: 975 },
-  { id: 7, date: "2023-05-01", type: "Usage", amount: -100, description: "Scheduled campaign", balance: 875 },
-]
+import { useToast } from "@/components/ui/use-toast"
 
 export default function BillingPage() {
   const [rechargeAmount, setRechargeAmount] = useState<number>(500)
+  const [billingData, setBillingData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const fetchBillingData = async () => {
+      try {
+        const response = await fetch("/api/client/billing")
+        if (!response.ok) {
+          throw new Error("Failed to fetch billing data")
+        }
+        const data = await response.json()
+        setBillingData(data)
+      } catch (error) {
+        console.error("Error fetching billing data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load billing data",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBillingData()
+  }, [toast])
+
+  if (loading) {
+    return <div className="flex-1 space-y-4 p-8 pt-6">Loading...</div>
+  }
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -38,8 +59,10 @@ export default function BillingPage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatMXN(875)}</div>
-            <p className="text-xs text-muted-foreground">Approx. 1,250 messages at your rate</p>
+            <div className="text-2xl font-bold">{formatMXN(billingData?.balance || 0)}</div>
+            <p className="text-xs text-muted-foreground">
+              Approx. {Math.floor((billingData?.balance || 0) / billingData?.pricePerSMS)} messages at your rate
+            </p>
           </CardContent>
           <CardFooter>
             <Button className="w-full" variant="outline">
@@ -56,19 +79,19 @@ export default function BillingPage() {
           <CardContent className="grid gap-2">
             <div className="flex items-center justify-between">
               <span className="text-sm">Price per SMS:</span>
-              <span className="font-medium">{formatMXN(0.7)}</span>
+              <span className="font-medium">{formatMXN(billingData?.pricePerSMS || 0)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">Current tier:</span>
-              <span className="font-medium">Standard</span>
+              <span className="font-medium">{billingData?.currentTier?.name || "Standard"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">Next tier:</span>
-              <span className="font-medium">Silver (1,000+ SMS)</span>
+              <span className="font-medium">{billingData?.nextTier?.name || "N/A"} ({billingData?.nextTier?.minVolume.toLocaleString()}+ SMS)</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">Next tier price:</span>
-              <span className="font-medium">{formatMXN(0.65)}</span>
+              <span className="font-medium">{formatMXN(billingData?.nextTier?.pricePerSMS || 0)}</span>
             </div>
           </CardContent>
           <CardFooter>
@@ -156,9 +179,9 @@ export default function BillingPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((transaction) => (
+                  {(billingData?.transactions || []).map((transaction: any) => (
                     <TableRow key={transaction.id}>
-                      <TableCell>{transaction.date}</TableCell>
+                      <TableCell>{new Date(transaction.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell>{transaction.description}</TableCell>
                       <TableCell>
                         <span
@@ -199,36 +222,27 @@ export default function BillingPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow>
-                    <TableCell>INV-001</TableCell>
-                    <TableCell>2023-04-15</TableCell>
-                    <TableCell>{formatMXN(1000)}</TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                        Paid
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>INV-002</TableCell>
-                    <TableCell>2023-04-25</TableCell>
-                    <TableCell>{formatMXN(500)}</TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                        Paid
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                  {(billingData?.invoices || []).map((invoice: any) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell>{invoice.number}</TableCell>
+                      <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{formatMXN(invoice.amount)}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          invoice.status === "Paid" ? "bg-green-100 text-green-800" :
+                          invoice.status === "Pending" ? "bg-yellow-100 text-yellow-800" :
+                          "bg-red-100 text-red-800"
+                        }`}>
+                          {invoice.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>
