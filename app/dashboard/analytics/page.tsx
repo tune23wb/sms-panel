@@ -1,113 +1,125 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import * as React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { LineChart, BarChart } from "@/components/ui/chart"
 import { useToast } from "@/components/ui/use-toast"
+import { BarChart3, TrendingUp, AlertCircle } from "lucide-react"
 
 interface AnalyticsData {
   messageVolume: Array<{ date: string; count: number }>
   messageStatuses: Array<{ status: string; _count: number }>
+  successRate: number
+  failedMessages: number
+  totalMessages: number
 }
 
 export default function AnalyticsPage() {
   const { toast } = useToast()
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [analytics, setAnalytics] = React.useState<AnalyticsData | null>(null)
+  const [loading, setLoading] = React.useState(true)
 
-  const fetchAnalytics = async () => {
-    try {
-      const response = await fetch("/api/admin/analytics")
-      if (!response.ok) {
-        throw new Error("Failed to fetch analytics")
+  React.useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const response = await fetch("/api/client/analytics")
+        if (!response.ok) {
+          throw new Error("Failed to fetch analytics")
+        }
+        const data = await response.json()
+        setAnalytics(data)
+      } catch (error) {
+        console.error("Error fetching analytics:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load analytics data",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
       }
-      const data = await response.json()
-      setAnalytics(data)
-    } catch (error) {
-      console.error("Error fetching analytics:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load analytics data",
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
     }
-  }
 
-  useEffect(() => {
     fetchAnalytics()
-    // Set up polling every 10 seconds
-    const interval = setInterval(fetchAnalytics, 10000)
+    // Refresh analytics every minute
+    const interval = setInterval(fetchAnalytics, 60000)
     return () => clearInterval(interval)
-  }, [])
-
-  const messageData = {
-    labels: analytics?.messageVolume.map(m => m.date) || [],
-    datasets: [
-      {
-        label: "Messages Sent",
-        data: analytics?.messageVolume.map(m => m.count) || [],
-      },
-    ],
-  }
-
-  const deliveryData = {
-    labels: analytics?.messageStatuses.map(s => s.status) || [],
-    datasets: [
-      {
-        label: "Message Status",
-        data: analytics?.messageStatuses.map(s => s._count) || [],
-      },
-    ],
-  }
+  }, [toast])
 
   if (loading) {
-    return <div>Loading...</div>
+    return <div>Loading analytics...</div>
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">Analytics</h3>
-        <p className="text-sm text-muted-foreground">
-          Detailed analysis of your messaging performance
-        </p>
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics?.successRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">Message delivery success rate</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Messages</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics?.totalMessages}</div>
+            <p className="text-xs text-muted-foreground">Messages sent</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Failed Messages</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics?.failedMessages}</div>
+            <p className="text-xs text-muted-foreground">Messages that failed to deliver</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <Tabs defaultValue="messages" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="messages">Message Volume</TabsTrigger>
-          <TabsTrigger value="delivery">Delivery Stats</TabsTrigger>
-        </TabsList>
-        <TabsContent value="messages" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Message Volume Trends</CardTitle>
-              <CardDescription>
-                Number of messages sent over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[400px]">
-              <LineChart data={messageData} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="delivery" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Delivery Status Distribution</CardTitle>
-              <CardDescription>
-                Breakdown of message delivery status
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[400px]">
-              <BarChart data={deliveryData} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <Card>
+        <CardHeader>
+          <CardTitle>Message Volume</CardTitle>
+          <CardDescription>Daily message count for the last 30 days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {analytics?.messageVolume && (
+            <div className="h-[200px]">
+              {/* Add your preferred charting library here */}
+              <pre className="text-xs">
+                {JSON.stringify(analytics.messageVolume, null, 2)}
+              </pre>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Message Status Distribution</CardTitle>
+          <CardDescription>Breakdown of message delivery statuses</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {analytics?.messageStatuses.map((status) => (
+              <div key={status.status} className="flex items-center justify-between">
+                <span className="text-sm font-medium">{status.status}</span>
+                <span className="text-sm text-muted-foreground">{status._count}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 } 
