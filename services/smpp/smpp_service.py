@@ -11,7 +11,7 @@ import smpplib.client
 import smpplib.consts
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 class SMPPService:
     def __init__(self, host: str, port: int, username: str, password: str):
@@ -25,6 +25,8 @@ class SMPPService:
         """Establish connection to SMPP server"""
         try:
             self.client = smpplib.client.Client(self.host, self.port)
+            self.client.set_message_sent_handler(lambda pdu: logging.debug(f"Message sent PDU: {pdu}"))
+            self.client.set_message_received_handler(lambda pdu: logging.debug(f"Message received PDU: {pdu}"))
             self.client.connect()
             self.client.bind_transmitter(system_id=self.username, password=self.password)
             logging.info("SMPP connection established successfully")
@@ -58,8 +60,8 @@ class SMPPService:
             parts, encoding_flag, msg_type_flag = smpplib.gsm.make_parts(message)
             
             for part in parts:
-                self.client.send_message(
-                    source_addr_ton=smpplib.consts.SMPP_TON_ALNUM,
+                pdu = self.client.send_message(
+                    source_addr_ton=smpplib.consts.SMPP_TON_NWSPEC,  # Changed to network-specific for numeric sender
                     source_addr_npi=smpplib.consts.SMPP_NPI_ISDN,
                     source_addr=source_addr,
                     dest_addr_ton=smpplib.consts.SMPP_TON_INTL,
@@ -70,6 +72,7 @@ class SMPPService:
                     short_message=part,
                     registered_delivery=registered_delivery,
                 )
+                logging.debug(f"Sent PDU: {pdu}")
             return True, "Message sent successfully"
         except Exception as e:
             error_msg = f"Failed to send message: {e}"
