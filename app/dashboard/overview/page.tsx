@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { 
   BarChart3, 
@@ -12,23 +13,58 @@ import {
   Calendar
 } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
+import { useToast } from "@/components/ui/use-toast"
+
+interface Message {
+  id: string
+  status: string
+  content: string
+  createdAt: string
+}
+
+interface Stats {
+  totalMessages: number
+  deliveryRate: number
+  messageGrowth: number
+  recentMessages: Message[]
+}
 
 export default function OverviewPage() {
-  // This would come from your API/database in the future
-  const stats = {
-    totalMessages: 1234,
-    deliveryRate: 98.5,
-    creditsLeft: 766,
-    recentMessages: [
-      { id: 1, status: "delivered", content: "Your appointment is confirmed for tomorrow at 2 PM", timestamp: "2 minutes ago" },
-      { id: 2, status: "failed", content: "Your order #123 has been shipped", timestamp: "15 minutes ago" },
-      { id: 3, status: "delivered", content: "Your verification code is 123456", timestamp: "1 hour ago" },
-      { id: 4, status: "pending", content: "Thank you for your purchase!", timestamp: "2 hours ago" },
-    ]
-  }
+  const { toast } = useToast()
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch("/api/admin/metrics")
+        if (!response.ok) {
+          throw new Error("Failed to fetch stats")
+        }
+        const data = await response.json()
+        setStats({
+          totalMessages: data.totalMessages,
+          deliveryRate: data.deliveryRate,
+          messageGrowth: data.messageGrowth,
+          recentMessages: [] // TODO: Implement recent messages endpoint
+        })
+      } catch (error) {
+        console.error("Error fetching stats:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard stats",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [toast])
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "delivered":
         return <CheckCircle2 className="h-4 w-4 text-green-500" />
       case "failed":
@@ -56,10 +92,12 @@ export default function OverviewPage() {
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalMessages}</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : stats?.totalMessages.toLocaleString()}
+            </div>
             <div className="flex items-center text-xs text-muted-foreground">
               <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
-              +12.5% from last month
+              {loading ? "..." : `${stats?.messageGrowth.toFixed(1)}% from last month`}
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
           </CardContent>
@@ -71,37 +109,14 @@ export default function OverviewPage() {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.deliveryRate}%</div>
-            <Progress value={stats.deliveryRate} className="mt-2" />
+            <div className="text-2xl font-bold">
+              {loading ? "..." : `${stats?.deliveryRate.toFixed(1)}%`}
+            </div>
+            <Progress 
+              value={loading ? 0 : stats?.deliveryRate} 
+              className="mt-2" 
+            />
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500" />
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Credits Left</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.creditsLeft}</div>
-            <div className="text-xs text-muted-foreground">
-              Approx. {Math.floor(stats.creditsLeft / 30)} days remaining
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-500" />
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Next Auto-Recharge</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">15 Days</div>
-            <div className="text-xs text-muted-foreground">
-              Auto-recharge: $50.00
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500" />
           </CardContent>
         </Card>
       </div>
@@ -113,23 +128,31 @@ export default function OverviewPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {stats.recentMessages.map((message) => (
-              <div key={message.id} 
-                className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
-              >
-                <div className="flex-shrink-0">
-                  {getStatusIcon(message.status)}
-                </div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {message.content}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {message.timestamp}
-                  </p>
-                </div>
+            {loading ? (
+              <div>Loading...</div>
+            ) : stats?.recentMessages.length === 0 ? (
+              <div className="text-center text-muted-foreground">
+                No messages sent yet
               </div>
-            ))}
+            ) : (
+              stats?.recentMessages.map((message) => (
+                <div key={message.id} 
+                  className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                >
+                  <div className="flex-shrink-0">
+                    {getStatusIcon(message.status)}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {message.content}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(message.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

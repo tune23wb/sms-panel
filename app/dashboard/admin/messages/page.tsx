@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, Filter, Download } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -9,63 +9,45 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// Sample message data
-const messages = [
-  {
-    id: 1,
-    sender: "John Doe",
-    recipient: "+1234567890",
-    content: "Hello, this is a test message",
-    status: "Delivered",
-    timestamp: "2024-03-15 10:30:00",
-  },
-  {
-    id: 2,
-    sender: "Jane Smith",
-    recipient: "+1987654321",
-    content: "Meeting reminder: 2 PM today",
-    status: "Sent",
-    timestamp: "2024-03-15 09:15:00",
-  },
-  {
-    id: 3,
-    sender: "Robert Johnson",
-    recipient: "+1122334455",
-    content: "Your order has been shipped",
-    status: "Failed",
-    timestamp: "2024-03-14 16:45:00",
-  },
-  {
-    id: 4,
-    sender: "Emily Davis",
-    recipient: "+1555666777",
-    content: "Thank you for your purchase",
-    status: "Delivered",
-    timestamp: "2024-03-14 14:20:00",
-  },
-  {
-    id: 5,
-    sender: "Michael Wilson",
-    recipient: "+1888999000",
-    content: "Your appointment is confirmed",
-    status: "Sent",
-    timestamp: "2024-03-14 11:05:00",
-  },
-]
+interface Message {
+  id: string
+  content: string
+  recipient: string
+  status: string
+  createdAt: string
+  sender?: string
+}
 
 export default function AdminMessagesPage() {
-  const [searchQuery, setSearchQuery] = useState("")
+  const [messages, setMessages] = useState<Message[]>([])
   const [statusFilter, setStatusFilter] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
 
-  const filteredMessages = messages.filter((message) => {
-    const matchesSearch = 
-      message.sender.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      message.recipient.includes(searchQuery) ||
-      message.content.toLowerCase().includes(searchQuery.toLowerCase())
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch("/api/messages")
+        const data = await response.json()
+        setMessages(data.messages || [])
+      } catch (error) {
+        console.error("Error fetching messages:", error)
+      }
+    }
     
-    const matchesStatus = statusFilter === "all" || message.status.toLowerCase() === statusFilter.toLowerCase()
-    
-    return matchesSearch && matchesStatus
+    fetchMessages()
+  }, [])
+
+  const filteredMessages = messages.filter(message => {
+    if (statusFilter !== "all" && message.status.toLowerCase() !== statusFilter) {
+      return false
+    }
+    if (searchQuery) {
+      return (
+        message.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        message.recipient.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+    return true
   })
 
   return (

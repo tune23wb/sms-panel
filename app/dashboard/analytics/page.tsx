@@ -1,29 +1,67 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LineChart, BarChart } from "@/components/ui/chart"
+import { useToast } from "@/components/ui/use-toast"
+
+interface AnalyticsData {
+  messageVolume: Array<{ date: string; count: number }>
+  messageStatuses: Array<{ status: string; _count: number }>
+}
 
 export default function AnalyticsPage() {
-  // This would come from your API/database in the future
+  const { toast } = useToast()
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const response = await fetch("/api/admin/analytics")
+        if (!response.ok) {
+          throw new Error("Failed to fetch analytics")
+        }
+        const data = await response.json()
+        setAnalytics(data)
+      } catch (error) {
+        console.error("Error fetching analytics:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load analytics data",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAnalytics()
+  }, [toast])
+
   const messageData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    labels: analytics?.messageVolume.map(m => m.date) || [],
     datasets: [
       {
         label: "Messages Sent",
-        data: [320, 280, 450, 380, 420, 390],
+        data: analytics?.messageVolume.map(m => m.count) || [],
       },
     ],
   }
 
   const deliveryData = {
-    labels: ["Delivered", "Failed", "Pending"],
+    labels: analytics?.messageStatuses.map(s => s.status) || [],
     datasets: [
       {
         label: "Message Status",
-        data: [85, 10, 5],
+        data: analytics?.messageStatuses.map(s => s._count) || [],
       },
     ],
+  }
+
+  if (loading) {
+    return <div>Loading...</div>
   }
 
   return (
