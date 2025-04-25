@@ -29,20 +29,14 @@ export default function SendSMS() {
 
     try {
       console.log('Making API request...');
-<<<<<<< Updated upstream
-      const response = await fetch("/api/sms/send", {
-=======
-      const response = await fetch("/api/sms", {
->>>>>>> Stashed changes
+      const response = await fetch("/api/messages/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: [{
-            number: phoneNumber,
-            message: message,
-          }],
+          recipient: phoneNumber,
+          content: message
         }),
       })
 

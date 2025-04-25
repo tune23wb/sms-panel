@@ -2,6 +2,9 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
+import { spawn } from 'child_process'
+import path from 'path'
+import fs from 'fs'
 
 const messageSchema = z.object({
   content: z.string().min(1, "Message content is required"),
@@ -63,31 +66,70 @@ export async function POST(req: Request) {
     })
 
     try {
-      // Simulate SMS sending process
-      // First update to SENT status
+      // Update to SENT status
       await prisma.message.update({
         where: { id: message.id },
         data: { status: "SENT" }
       })
 
-      // Simulate delivery delay and status update
-      setTimeout(async () => {
-        try {
-          // Simulate 95% success rate
-          const isDelivered = Math.random() < 0.95
+      // Path to the Python script and virtual environment
+      const scriptPath = path.join(process.cwd(), 'services', 'smpp', 'smpp_service.py')
+      const venvPythonPath = '/var/www/sms-panel-app/venv/bin/python3'
 
-          await prisma.message.update({
-            where: { id: message.id },
-            data: {
-              status: isDelivered ? "DELIVERED" : "FAILED"
-            }
-          })
-        } catch (error) {
-          console.error("Error updating message status:", error)
-        }
-      }, 5000) // 5 second delay
+      // Check if script exists
+      if (!fs.existsSync(scriptPath)) {
+        throw new Error('SMS service script not found')
+      }
 
-      // Deduct balance (assuming 1 credit per message)
+      // Check if venv Python exists
+      if (!fs.existsSync(venvPythonPath)) {
+        throw new Error('Python environment not found')
+      }
+
+      // Spawn Python process to send SMS
+      const pythonProcess = spawn(venvPythonPath, [
+        scriptPath,
+        '--destination', recipient,
+        '--message', content,
+        '--source', 'TestSMPP'
+      ])
+
+      // Handle the Python process
+      const sendSMS = new Promise((resolve, reject) => {
+        let output = ''
+        let error = ''
+
+        pythonProcess.stdout.on('data', (data) => {
+          output += data.toString()
+        })
+
+        pythonProcess.stderr.on('data', (data) => {
+          error += data.toString()
+        })
+
+        pythonProcess.on('close', async (code) => {
+          if (code === 0) {
+            // Update status to DELIVERED on successful send
+            await prisma.message.update({
+              where: { id: message.id },
+              data: { status: "DELIVERED" }
+            })
+            resolve(output)
+          } else {
+            // Update status to FAILED on error
+            await prisma.message.update({
+              where: { id: message.id },
+              data: { status: "FAILED" }
+            })
+            reject(new Error(`Failed to send SMS: ${error}`))
+          }
+        })
+      })
+
+      // Wait for SMS to be sent
+      await sendSMS
+
+      // Deduct balance
       await prisma.user.update({
         where: {
           id: user.id
