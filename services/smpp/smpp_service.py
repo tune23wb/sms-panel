@@ -25,15 +25,30 @@ class SMPPService:
         """Establish connection to SMPP server"""
         try:
             self.client = smpplib.client.Client(self.host, self.port)
-            self.client.set_message_sent_handler(lambda pdu: logging.debug(f"Message sent PDU: {pdu}"))
-            self.client.set_message_received_handler(lambda pdu: logging.debug(f"Message received PDU: {pdu}"))
+            self.client.set_message_sent_handler(self.handle_message_sent)
+            self.client.set_message_received_handler(self.handle_message_received)
             self.client.connect()
-            self.client.bind_transmitter(system_id=self.username, password=self.password)
+            self.client.bind_transceiver(system_id=self.username, password=self.password)
             logging.info("SMPP connection established successfully")
             return True
         except Exception as e:
             logging.error(f"Failed to connect to SMPP server: {e}")
             return False
+
+    def handle_message_sent(self, pdu):
+        """Handle message sent confirmation"""
+        logging.info(f"Message sent PDU: {pdu}")
+        if pdu.command == "submit_sm_resp":
+            logging.info(f"Message submitted successfully with ID: {pdu.message_id}")
+
+    def handle_message_received(self, pdu):
+        """Handle incoming messages and delivery receipts"""
+        logging.info(f"Message received PDU: {pdu}")
+        if pdu.command == "deliver_sm":
+            # Check if this is a delivery receipt
+            if hasattr(pdu, 'receipted_message_id'):
+                logging.info(f"Delivery receipt received for message {pdu.receipted_message_id}")
+                print("DELIVERED")  # This will be captured by the Node.js process
 
     def send_message(self, 
                     destination: str, 
@@ -61,7 +76,7 @@ class SMPPService:
             
             for part in parts:
                 pdu = self.client.send_message(
-                    source_addr_ton=smpplib.consts.SMPP_TON_NWSPEC,  # Changed to network-specific for numeric sender
+                    source_addr_ton=smpplib.consts.SMPP_TON_NWSPEC,
                     source_addr_npi=smpplib.consts.SMPP_NPI_ISDN,
                     source_addr=source_addr,
                     dest_addr_ton=smpplib.consts.SMPP_TON_INTL,
@@ -73,6 +88,12 @@ class SMPPService:
                     registered_delivery=registered_delivery,
                 )
                 logging.debug(f"Sent PDU: {pdu}")
+                
+                # Wait for delivery receipt if requested
+                if registered_delivery:
+                    time.sleep(2)  # Give some time for the receipt to arrive
+                    self.client.listen(1)  # Listen for 1 second for any incoming PDUs
+            
             return True, "Message sent successfully"
         except Exception as e:
             error_msg = f"Failed to send message: {e}"
@@ -114,7 +135,8 @@ def main():
             success, message = smpp_service.send_message(
                 destination=args.destination,
                 message=args.message,
-                source_addr=args.source
+                source_addr=args.source,
+                registered_delivery=True  # Always request delivery receipt
             )
             print(message)  # This will be captured by the Node.js process
             sys.exit(0 if success else 1)

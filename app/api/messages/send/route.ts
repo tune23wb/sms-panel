@@ -66,12 +66,6 @@ export async function POST(req: Request) {
     })
 
     try {
-      // Update to SENT status
-      await prisma.message.update({
-        where: { id: message.id },
-        data: { status: "SENT" }
-      })
-
       // Path to the Python script and virtual environment
       const scriptPath = path.join(process.cwd(), 'services', 'smpp', 'smpp_service.py')
       const venvPythonPath = '/var/www/sms-panel-app/venv/bin/python3'
@@ -85,6 +79,12 @@ export async function POST(req: Request) {
       if (!fs.existsSync(venvPythonPath)) {
         throw new Error('Python environment not found')
       }
+
+      // Update to SENT status before sending
+      await prisma.message.update({
+        where: { id: message.id },
+        data: { status: "SENT" }
+      })
 
       // Spawn Python process to send SMS
       const pythonProcess = spawn(venvPythonPath, [
@@ -101,6 +101,13 @@ export async function POST(req: Request) {
 
         pythonProcess.stdout.on('data', (data) => {
           output += data.toString()
+          // Check for delivery receipt in output
+          if (data.toString().includes('DELIVERED')) {
+            prisma.message.update({
+              where: { id: message.id },
+              data: { status: "DELIVERED" }
+            }).catch(console.error)
+          }
         })
 
         pythonProcess.stderr.on('data', (data) => {
@@ -109,7 +116,7 @@ export async function POST(req: Request) {
 
         pythonProcess.on('close', async (code) => {
           if (code === 0) {
-            // Update status to DELIVERED on successful send
+            // If no delivery receipt was received, update to DELIVERED
             await prisma.message.update({
               where: { id: message.id },
               data: { status: "DELIVERED" }

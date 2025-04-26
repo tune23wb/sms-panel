@@ -61,9 +61,29 @@ export default function OverviewPage() {
 
   useEffect(() => {
     fetchStats()
-    // Set up polling every 10 seconds
-    const interval = setInterval(fetchStats, 10000)
-    return () => clearInterval(interval)
+    
+    // Set up polling with exponential backoff
+    let retryCount = 0
+    const maxRetries = 3
+    const baseDelay = 5000 // Start with 5 seconds
+    
+    const poll = () => {
+      const delay = Math.min(baseDelay * Math.pow(2, retryCount), 30000) // Max 30 seconds
+      setTimeout(() => {
+        fetchStats().then(() => {
+          retryCount = 0 // Reset retry count on success
+        }).catch(() => {
+          retryCount = Math.min(retryCount + 1, maxRetries)
+        })
+        poll()
+      }, delay)
+    }
+    
+    poll()
+    
+    return () => {
+      // Cleanup will be handled by the timeout
+    }
   }, [])
 
   const getStatusIcon = (status: string) => {
