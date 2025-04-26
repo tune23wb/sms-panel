@@ -1,8 +1,7 @@
 "use client"
 
 import React from "react"
-import { FormEvent } from "react"
-import { useState } from "react"
+import { FormEvent, useState } from "react"
 import { Check, Loader2, Send, Upload, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -16,19 +15,18 @@ import { useToast } from "@/components/ui/use-toast"
 
 export default function SendSMS() {
   const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSent, setIsSent] = useState(false)
-  const [messageLength, setMessageLength] = useState(0)
   const [phoneNumber, setPhoneNumber] = useState("")
   const [message, setMessage] = useState("")
+  const [messageLength, setMessageLength] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault()
+    if (isLoading) return // Prevent double submission
+    
     setIsLoading(true)
-    console.log('Attempting to send SMS:', { phoneNumber, messageLength });
-
+    
     try {
-      console.log('Making API request...');
       const response = await fetch("/api/messages/send", {
         method: "POST",
         headers: {
@@ -40,17 +38,14 @@ export default function SendSMS() {
         }),
       })
 
-      console.log('API response status:', response.status);
       const data = await response.json()
-      console.log('API response data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || data.details || "Failed to send SMS")
       }
 
       // Check if the message was actually sent
-      if (data.message?.status === "SENT" || data.message?.status === "DELIVERED") {
-        setIsSent(true)
+      if (data.success && data.message?.status === "DELIVERED") {
         toast({
           title: "Success",
           description: "Message sent successfully",
@@ -60,16 +55,11 @@ export default function SendSMS() {
         setPhoneNumber("")
         setMessage("")
         setMessageLength(0)
-
-        // Reset success state after 3 seconds
-        setTimeout(() => {
-          setIsSent(false)
-        }, 3000)
       } else {
-        throw new Error("Message was not sent successfully")
+        throw new Error(data.error || "Message was not delivered successfully")
       }
     } catch (error) {
-      console.error('Error in handleSendMessage:', error);
+      console.error('Error in handleSendMessage:', error)
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to send SMS",
@@ -90,15 +80,17 @@ export default function SendSMS() {
         <TabsList>
           <TabsTrigger value="single">Single Message</TabsTrigger>
           <TabsTrigger value="bulk">Bulk Messages</TabsTrigger>
-          <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
+          <TabsTrigger value="schedule">Schedule Message</TabsTrigger>
         </TabsList>
 
         <TabsContent value="single" className="space-y-4">
           <Card>
             <form onSubmit={handleSendMessage}>
               <CardHeader>
-                <CardTitle>Send a Single SMS</CardTitle>
-                <CardDescription>Send an SMS message to a single recipient</CardDescription>
+                <CardTitle>Send Single Message</CardTitle>
+                <CardDescription>
+                  Send a message to a single recipient
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -109,6 +101,7 @@ export default function SendSMS() {
                     required 
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -127,20 +120,20 @@ export default function SendSMS() {
                       setMessageLength(e.target.value.length)
                     }}
                     maxLength={160}
+                    disabled={isLoading}
                   />
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoading}
+                >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Sending...
-                    </>
-                  ) : isSent ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Sent Successfully
                     </>
                   ) : (
                     <>
@@ -154,68 +147,38 @@ export default function SendSMS() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="bulk" className="space-y-4">
+        <TabsContent value="bulk">
           <Card>
             <CardHeader>
-              <CardTitle>Send Bulk SMS</CardTitle>
-              <CardDescription>Send SMS messages to multiple recipients at once</CardDescription>
+              <CardTitle>Send Bulk Messages</CardTitle>
+              <CardDescription>
+                Upload a CSV file or add numbers manually
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Upload Recipients</Label>
-                <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-1">Drag and drop your CSV or TXT file here</p>
-                  <p className="text-xs text-muted-foreground mb-4">or click to browse files</p>
-                  <p className="text-xs text-muted-foreground mb-2">Supported formats: .csv, .txt</p>
-                  <Button variant="outline" size="sm">
-                    Upload File
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bulk-message">Message Template</Label>
-                <Textarea
-                  id="bulk-message"
-                  placeholder="Hello {name}, this is your message..."
-                  className="min-h-[120px]"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Use {"{name}"}, {"{id}"} etc. as placeholders for personalization
-                </p>
+              <div className="grid gap-4">
+                <Button variant="outline" className="w-full">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload CSV
+                </Button>
+                <Button variant="outline" className="w-full">
+                  <Users className="mr-2 h-4 w-4" />
+                  Add Numbers
+                </Button>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button className="w-full">
-                <Users className="mr-2 h-4 w-4" />
-                Send to All Recipients
-              </Button>
-            </CardFooter>
           </Card>
         </TabsContent>
 
-        <TabsContent value="scheduled" className="space-y-4">
+        <TabsContent value="schedule">
           <Card>
             <CardHeader>
-              <CardTitle>Schedule SMS</CardTitle>
-              <CardDescription>Schedule SMS messages to be sent at a later time</CardDescription>
+              <CardTitle>Schedule Message</CardTitle>
+              <CardDescription>
+                Schedule a message to be sent later
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="schedule-recipient">Recipient Phone Number</Label>
-                <Input id="schedule-recipient" placeholder="+1 (555) 123-4567" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="schedule-message">Message</Label>
-                <Textarea id="schedule-message" placeholder="Type your message here..." className="min-h-[120px]" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="schedule-date">Schedule Date & Time</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <Input id="schedule-date" type="date" />
-                  <Input id="schedule-time" type="time" />
-                </div>
-              </div>
               <div className="space-y-2">
                 <Label>Repeat</Label>
                 <RadioGroup defaultValue="none">

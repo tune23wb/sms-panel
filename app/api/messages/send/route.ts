@@ -4,7 +4,8 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { spawn } from 'child_process'
 import path from 'path'
-import fs from 'fs'
+
+const PRICE_PER_SMS = 0.70 // MXN per SMS
 
 const messageSchema = z.object({
   content: z.string().min(1, "Message content is required"),
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { content, recipient, campaignId } = messageSchema.parse(body)
 
-    // Get user from database
+    // Get user from database with current pricing tier
     const user = await prisma.user.findUnique({
       where: {
         email: session.user.email!
@@ -44,8 +45,11 @@ export async function POST(req: Request) {
       )
     }
 
+    // Calculate cost based on pricing tier
+    const smsCost = PRICE_PER_SMS
+
     // Check user balance
-    if (user.balance <= 0) {
+    if (user.balance < smsCost) {
       return NextResponse.json(
         {
           error: "Insufficient balance"
@@ -54,7 +58,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // Create message with initial status
+    // Create initial message record
     const message = await prisma.message.create({
       data: {
         content,
@@ -65,146 +69,94 @@ export async function POST(req: Request) {
       }
     })
 
-    try {
-      // Path to the Python script and virtual environment
-      const scriptPath = path.join(process.cwd(), 'services', 'smpp', 'smpp_service.py')
-      
-      // Use system Python on Windows, virtual env on Linux
-      const isWindows = process.platform === 'win32'
-      const pythonPath = isWindows ? 'python' : '/var/www/sms-panel-app/venv/bin/python3'
+    // Path to Python script
+    const scriptPath = path.join(process.cwd(), 'services', 'smpp', 'smpp_service.py')
+    const pythonProcess = spawn('python3', [
+      scriptPath,
+      '--destination', recipient,
+      '--message', content
+    ])
 
-      // Check if script exists
-      if (!fs.existsSync(scriptPath)) {
-        throw new Error('SMS service script not found')
-      }
+    // Create a promise to handle the Python script execution
+    const sendResult = await new Promise((resolve, reject) => {
+      let output = ''
+      let error = ''
 
-      // Check if Python is available
-      try {
-        await new Promise((resolve, reject) => {
-          const checkPython = spawn(pythonPath, ['--version'])
-          checkPython.on('close', (code) => {
-            if (code === 0) resolve(true)
-            else reject(new Error(`Python not found at ${pythonPath}`))
-          })
-        })
-      } catch (error) {
-        console.error('Python environment error:', error)
-        throw new Error('Python environment not properly configured')
-      }
-
-      // Update to SENT status before sending
-      await prisma.message.update({
-        where: { id: message.id },
-        data: { status: "SENT" }
+      pythonProcess.stdout.on('data', (data) => {
+        output += data.toString()
       })
 
-      // Spawn Python process to send SMS
-      const pythonProcess = spawn(pythonPath, [
-        scriptPath,
-        '--destination', recipient,
-        '--message', content,
-        '--source', 'TestSMPP'
-      ])
+      pythonProcess.stderr.on('data', (data) => {
+        error += data.toString()
+      })
 
-      // Set a timeout for the Python process
-      const timeout = setTimeout(() => {
-        pythonProcess.kill()
-        throw new Error('SMS sending timed out')
-      }, 30000) // 30 seconds timeout
-
-      // Handle the Python process
-      const sendSMS = new Promise((resolve, reject) => {
-        let output = ''
-        let error = ''
-
-        pythonProcess.stdout.on('data', (data) => {
-          output += data.toString()
-          // Check for delivery receipt in output
-          if (data.toString().includes('DELIVERED')) {
-            prisma.message.update({
-              where: { id: message.id },
-              data: { status: "DELIVERED" }
-            }).catch(console.error)
-          }
-        })
-
-        pythonProcess.stderr.on('data', (data) => {
-          error += data.toString()
-        })
-
-        pythonProcess.on('close', async (code) => {
-          clearTimeout(timeout)
-          if (code === 0) {
-            // If no delivery receipt was received, update to DELIVERED
-            await prisma.message.update({
-              where: { id: message.id },
-              data: { status: "DELIVERED" }
-            })
-            resolve(output)
-          } else {
-            // Update status to FAILED on error
+      pythonProcess.on('close', async (code) => {
+        if (code === 0 && output.includes('Success')) {
+          try {
+            // Deduct balance and update message status in a transaction
+            const result = await prisma.$transaction([
+              // Deduct balance
+              prisma.user.update({
+                where: { id: user.id },
+                data: {
+                  balance: {
+                    decrement: smsCost
+                  }
+                }
+              }),
+              // Create transaction record
+              prisma.transaction.create({
+                data: {
+                  type: "DEBIT",
+                  amount: smsCost,
+                  description: `SMS sent to ${recipient}`,
+                  status: "COMPLETED",
+                  userId: user.id
+                }
+              }),
+              // Update message status
+              prisma.message.update({
+                where: { id: message.id },
+                data: { status: "DELIVERED" }
+              })
+            ])
+            resolve({ success: true, message: result[2] })
+          } catch (txError) {
+            console.error("Transaction error:", txError)
+            // Update message status to FAILED if transaction fails
             await prisma.message.update({
               where: { id: message.id },
               data: { status: "FAILED" }
             })
-            reject(new Error(`Failed to send SMS: ${error}`))
+            reject(new Error("Failed to process successful delivery"))
           }
+        } else {
+          // Update message status to FAILED
+          await prisma.message.update({
+            where: { id: message.id },
+            data: { status: "FAILED" }
+          })
+          reject(new Error(`Failed to send SMS: ${error || 'Unknown error'}`))
+        }
+      })
+
+      pythonProcess.on('error', async (err) => {
+        // Update message status to FAILED
+        await prisma.message.update({
+          where: { id: message.id },
+          data: { status: "FAILED" }
         })
+        reject(new Error(`Failed to start Python process: ${err.message}`))
       })
+    })
 
-      // Wait for SMS to be sent with timeout
-      await Promise.race([
-        sendSMS,
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('SMS sending timed out')), 30000)
-        )
-      ])
-
-      // Deduct balance
-      await prisma.user.update({
-        where: {
-          id: user.id
-        },
-        data: {
-          balance: {
-            decrement: 1
-          }
-        }
-      })
-
-      return NextResponse.json({
-        message: {
-          id: message.id,
-          status: "SENT",
-          content,
-          recipient
-        }
-      })
-    } catch (error) {
-      // If sending fails, update message status to FAILED
-      await prisma.message.update({
-        where: {
-          id: message.id
-        },
-        data: {
-          status: "FAILED"
-        }
-      })
-      throw error
-    }
+    return NextResponse.json(sendResult)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: error.errors[0].message
-        },
-        { status: 400 }
-      )
-    }
-
+    console.error("Error sending SMS:", error)
     return NextResponse.json(
-      {
-        error: "Internal server error"
+      { 
+        error: "Failed to send SMS",
+        details: error instanceof Error ? error.message : "Unknown error"
       },
       { status: 500 }
     )
