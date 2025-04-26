@@ -2,6 +2,7 @@
 import logging
 import sys
 import time
+import json
 import argparse
 from datetime import datetime
 from typing import Optional, Tuple
@@ -20,6 +21,7 @@ class SMPPService:
         self.username = username
         self.password = password
         self.client = None
+        self.message_status = "PENDING"
 
     def connect(self) -> bool:
         """Establish connection to SMPP server"""
@@ -40,6 +42,8 @@ class SMPPService:
         logging.info(f"Message sent PDU: {pdu}")
         if pdu.command == "submit_sm_resp":
             logging.info(f"Message submitted successfully with ID: {pdu.message_id}")
+            self.message_status = "SENT"
+            print(json.dumps({"status": "SENT", "message_id": str(pdu.message_id)}))
 
     def handle_message_received(self, pdu):
         """Handle incoming messages and delivery receipts"""
@@ -48,7 +52,11 @@ class SMPPService:
             # Check if this is a delivery receipt
             if hasattr(pdu, 'receipted_message_id'):
                 logging.info(f"Delivery receipt received for message {pdu.receipted_message_id}")
-                print("DELIVERED")  # This will be captured by the Node.js process
+                self.message_status = "DELIVERED"
+                print(json.dumps({
+                    "status": "DELIVERED",
+                    "message_id": str(pdu.receipted_message_id)
+                }))
 
     def send_message(self, 
                     destination: str, 
@@ -68,7 +76,7 @@ class SMPPService:
             Tuple of (success: bool, error_message: str)
         """
         if not self.client:
-            return False, "Not connected to SMPP server"
+            return False, json.dumps({"status": "FAILED", "error": "Not connected to SMPP server"})
 
         try:
             # Encode the message
@@ -94,11 +102,18 @@ class SMPPService:
                     time.sleep(2)  # Give some time for the receipt to arrive
                     self.client.listen(1)  # Listen for 1 second for any incoming PDUs
             
-            return True, "Message sent successfully"
+            # Return final status
+            return True, json.dumps({
+                "status": self.message_status,
+                "message": "Message processed successfully"
+            })
         except Exception as e:
             error_msg = f"Failed to send message: {e}"
             logging.error(error_msg)
-            return False, error_msg
+            return False, json.dumps({
+                "status": "FAILED",
+                "error": error_msg
+            })
 
     def disconnect(self):
         """Safely disconnect from SMPP server"""
