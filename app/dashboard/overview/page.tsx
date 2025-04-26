@@ -36,15 +36,15 @@ export default function OverviewPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch("/api/admin/metrics")
+      const response = await fetch("/api/client/metrics")
       if (!response.ok) {
         throw new Error("Failed to fetch stats")
       }
       const data = await response.json()
       setStats({
-        totalMessages: data.totalMessages,
-        deliveryRate: data.deliveryRate,
-        messageGrowth: data.messageGrowth,
+        totalMessages: data.totalMessages || 0,
+        deliveryRate: data.deliveryRate || 0,
+        messageGrowth: ((data.messagesLastMonth || 0) / (data.totalMessages || 1) * 100) - 100,
         recentMessages: data.recentMessages || []
       })
     } catch (error) {

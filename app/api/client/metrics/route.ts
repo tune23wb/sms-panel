@@ -65,13 +65,28 @@ export async function GET() {
       }
     })
 
+    // Get recent messages
+    const recentMessages = await prisma.message.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        phoneNumber: true,
+        content: true,
+        status: true,
+        createdAt: true
+      }
+    })
+
     return NextResponse.json({
       totalMessages,
       messagesLastMonth,
       activeCampaigns,
       deliveryRate,
       messageStatuses,
-      balance: user.balance
+      balance: user.balance,
+      recentMessages
     })
   } catch (error) {
     console.error("Error fetching client metrics:", error)

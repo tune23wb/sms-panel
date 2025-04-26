@@ -1,10 +1,48 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
 import { columns } from "./columns"
+import { useToast } from "@/components/ui/use-toast"
+
+interface Message {
+  id: string
+  phoneNumber: string
+  content: string
+  status: string
+  createdAt: string
+}
 
 export default function HistoryPage() {
+  const { toast } = useToast()
+  const [messages, setMessages] = useState<Message[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchMessages = async () => {
+    try {
+      const response = await fetch("/api/client/messages")
+      if (!response.ok) {
+        throw new Error("Failed to fetch messages")
+      }
+      const data = await response.json()
+      setMessages(data.messages || [])
+    } catch (error) {
+      console.error("Error fetching messages:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load message history",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchMessages()
+  }, [])
+
   return (
     <div className="space-y-6">
       <div>
@@ -21,7 +59,11 @@ export default function HistoryPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={[]} />
+          {loading ? (
+            <div>Loading...</div>
+          ) : (
+            <DataTable columns={columns} data={messages} />
+          )}
         </CardContent>
       </Card>
     </div>
