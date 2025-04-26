@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
     try {
@@ -28,6 +29,29 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
+
+        // Get user from database
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email! }
+        });
+
+        if (!user) {
+            return NextResponse.json(
+                { error: 'User not found' },
+                { status: 404 }
+            );
+        }
+
+        // Create message record in database
+        const messageRecord = await prisma.message.create({
+            data: {
+                userId: user.id,
+                phoneNumber: destination,
+                content: message,
+                status: 'PENDING',
+                createdAt: new Date(),
+            }
+        });
 
         // Path to the Python script and virtual environment
         const scriptPath = path.join(process.cwd(), 'services', 'smpp', 'smpp_service.py');
@@ -83,18 +107,33 @@ export async function POST(request: Request) {
                 console.error('Python process error:', data.toString());
             });
 
-            pythonProcess.on('close', (code) => {
+            pythonProcess.on('close', async (code) => {
                 console.log('Python process exited with code:', code);
                 if (code === 0) {
+                    // Update message status to DELIVERED
+                    await prisma.message.update({
+                        where: { id: messageRecord.id },
+                        data: { status: 'DELIVERED' }
+                    });
                     resolve(output);
                 } else {
+                    // Update message status to FAILED
+                    await prisma.message.update({
+                        where: { id: messageRecord.id },
+                        data: { status: 'FAILED' }
+                    });
                     reject(new Error(`Python script failed with code ${code}: ${error}`));
                 }
             });
 
             // Handle process errors
-            pythonProcess.on('error', (err) => {
+            pythonProcess.on('error', async (err) => {
                 console.error('Failed to start Python process:', err);
+                // Update message status to FAILED
+                await prisma.message.update({
+                    where: { id: messageRecord.id },
+                    data: { status: 'FAILED' }
+                });
                 reject(new Error(`Failed to start Python process: ${err.message}`));
             });
         });

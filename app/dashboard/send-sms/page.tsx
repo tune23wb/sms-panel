@@ -192,25 +192,47 @@ export default function SendBulkSMSPage() {
         }
       })
 
-      const response = await fetch("/api/sms/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages,
-        }),
-      })
+      // Send messages sequentially to avoid overwhelming the server
+      const results = []
+      for (const message of messages) {
+        try {
+          const response = await fetch("/api/sms", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              destination: message.number,
+              message: message.message,
+            }),
+          })
 
-      const result = await response.json()
+          if (!response.ok) {
+            throw new Error(`Failed to send SMS to ${message.number}`)
+          }
 
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to send SMS")
+          const result = await response.json()
+          results.push({
+            number: message.number,
+            success: result.success,
+            message: result.result
+          })
+        } catch (error) {
+          results.push({
+            number: message.number,
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error"
+          })
+        }
       }
 
+      // Count successful and failed messages
+      const successful = results.filter(r => r.success).length
+      const failed = results.filter(r => !r.success).length
+
       toast({
-        title: "Success",
-        description: `SMS sent to ${recipients.length} recipients`,
+        title: "SMS Send Complete",
+        description: `Successfully sent ${successful} messages. ${failed} failed.`,
       })
 
       // Reset form and recipients
