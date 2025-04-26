@@ -346,11 +346,11 @@ export default function UsersPage() {
                 name="pricing-tier"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="standard">Standard - $0.70 MXN per SMS</option>
-                <option value="silver">Silver - $0.65 MXN per SMS (1,000+ SMS)</option>
-                <option value="gold">Gold - $0.60 MXN per SMS (5,000+ SMS)</option>
-                <option value="platinum">Platinum - $0.55 MXN per SMS (10,000+ SMS)</option>
-                <option value="custom">Custom - $0.50 MXN per SMS (25,000+ SMS)</option>
+                <option value="standard">Standard - $0.70 MXN per SMS (1-9,999 SMS)</option>
+                <option value="silver">Silver - $0.65 MXN per SMS (10,000-49,999 SMS)</option>
+                <option value="gold">Gold - $0.60 MXN per SMS (50,000-99,999 SMS)</option>
+                <option value="platinum">Platinum - $0.55 MXN per SMS (100,000-199,999 SMS)</option>
+                <option value="custom">Custom - $0.50 MXN per SMS (200,000-300,000 SMS)</option>
               </select>
               <p className="text-xs text-muted-foreground">Select the appropriate pricing tier for this client</p>
             </div>

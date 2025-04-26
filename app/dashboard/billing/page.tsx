@@ -1,20 +1,69 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { formatMXN } from "@/components/pricing-tiers"
+
+interface BillingData {
+  balance: number
+  pricePerSMS: number
+  currentTier: {
+    name: string
+    minVolume: number
+    pricePerSMS: number
+  }
+  nextTier: {
+    name: string
+    minVolume: number
+    pricePerSMS: number
+  } | null
+  transactions: Array<{
+    id: string
+    createdAt: string
+    type: string
+    amount: number
+    description: string
+    status: string
+  }>
+}
 
 export default function BillingPage() {
-  // This would come from your API/database in the future
-  const userPlan = {
-    name: "Basic Plan",
-    smsRate: 0.05, // $0.05 per SMS
-    monthlyLimit: 1000,
-    usedThisMonth: 450,
-    balance: 27.50, // $27.50 remaining balance
+  const [billingData, setBillingData] = useState<BillingData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchBillingData() {
+      try {
+        const response = await fetch('/api/client/billing')
+        if (!response.ok) {
+          throw new Error('Failed to fetch billing data')
+        }
+        const data = await response.json()
+        setBillingData(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchBillingData()
+  }, [])
+
+  if (isLoading) {
+    return <div>Loading billing information...</div>
   }
 
-  const usagePercentage = (userPlan.usedThisMonth / userPlan.monthlyLimit) * 100
+  if (error) {
+    return <div>Error: {error}</div>
+  }
+
+  if (!billingData) {
+    return <div>No billing data available</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -35,15 +84,15 @@ export default function BillingPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Plan Name</span>
-                <Badge variant="secondary">{userPlan.name}</Badge>
+                <Badge variant="secondary">{billingData.currentTier.name}</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">SMS Rate</span>
-                <span className="text-sm">${userPlan.smsRate.toFixed(2)} per SMS</span>
+                <span className="text-sm">{formatMXN(billingData.pricePerSMS)} per SMS</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Monthly Limit</span>
-                <span className="text-sm">{userPlan.monthlyLimit} SMS</span>
+                <span className="text-sm font-medium">Minimum Volume</span>
+                <span className="text-sm">{billingData.currentTier.minVolume.toLocaleString()} SMS</span>
               </div>
             </div>
           </CardContent>
@@ -51,26 +100,31 @@ export default function BillingPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Usage</CardTitle>
-            <CardDescription>Your current month's usage</CardDescription>
+            <CardTitle>Balance</CardTitle>
+            <CardDescription>Your current balance and next tier</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Used This Month</span>
-                <span className="text-sm">{userPlan.usedThisMonth} SMS</span>
+                <span className="text-sm font-medium">Current Balance</span>
+                <span className="text-sm">{formatMXN(billingData.balance)}</span>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Usage Progress</span>
-                  <span className="text-sm">{usagePercentage.toFixed(1)}%</span>
-                </div>
-                <Progress value={usagePercentage} />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Remaining Balance</span>
-                <span className="text-sm">${userPlan.balance.toFixed(2)}</span>
-              </div>
+              {billingData.nextTier && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Next Tier</span>
+                    <span className="text-sm">{billingData.nextTier.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Next Tier Rate</span>
+                    <span className="text-sm">{formatMXN(billingData.nextTier.pricePerSMS)} per SMS</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Volume Required</span>
+                    <span className="text-sm">{billingData.nextTier.minVolume.toLocaleString()} SMS</span>
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -78,21 +132,36 @@ export default function BillingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Future Integration</CardTitle>
-          <CardDescription>Coming soon: Stripe integration for payments</CardDescription>
+          <CardTitle>Recent Transactions</CardTitle>
+          <CardDescription>Your recent SMS usage and payments</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            In the future, this page will be integrated with Stripe to handle payments, 
-            subscriptions, and automatic top-ups. You'll be able to:
-          </p>
-          <ul className="mt-2 list-disc pl-4 text-sm text-muted-foreground">
-            <li>View and manage your subscription</li>
-            <li>Set up automatic payments</li>
-            <li>View detailed billing history</li>
-            <li>Download invoices</li>
-            <li>Update payment methods</li>
-          </ul>
+          <div className="space-y-4">
+            {billingData.transactions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No recent transactions</p>
+            ) : (
+              <div className="space-y-2">
+                {billingData.transactions.slice(0, 5).map((transaction) => (
+                  <div key={transaction.id} className="flex items-center justify-between text-sm">
+                    <div>
+                      <p className="font-medium">{transaction.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(transaction.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={transaction.amount < 0 ? "text-red-500" : "text-green-500"}>
+                        {formatMXN(Math.abs(transaction.amount))}
+                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        {transaction.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

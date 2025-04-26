@@ -86,8 +86,11 @@ export default function AdminBillingPage() {
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${billingData?.totalRevenue.toFixed(2) || "0.00"}</div>
-                <p className="text-xs text-muted-foreground">{billingData?.revenueGrowth > 0 ? "+" : ""}{billingData?.revenueGrowth.toFixed(1)}% from last month</p>
+                <div className="text-2xl font-bold">${((billingData?.activeCosts?.current || 0) + (billingData?.draftCosts?.current || 0)).toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground">
+                  {((billingData?.activeCosts?.growth || 0) + (billingData?.draftCosts?.growth || 0)) > 0 ? "+" : ""}
+                  {((billingData?.activeCosts?.growth || 0) + (billingData?.draftCosts?.growth || 0)).toFixed(1)}% from last month
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -96,8 +99,11 @@ export default function AdminBillingPage() {
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{billingData?.activeSubscriptions || 0}</div>
-                <p className="text-xs text-muted-foreground">{billingData?.subscriptionGrowth > 0 ? "+" : ""}{billingData?.subscriptionGrowth.toFixed(1)}% from last month</p>
+                <div className="text-2xl font-bold">{billingData?.activeCosts?.current || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {(billingData?.activeCosts?.growth || 0) > 0 ? "+" : ""}
+                  {(billingData?.activeCosts?.growth || 0).toFixed(1)}% from last month
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -106,8 +112,11 @@ export default function AdminBillingPage() {
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${billingData?.pendingPayments.toFixed(2) || "0.00"}</div>
-                <p className="text-xs text-muted-foreground">{billingData?.pendingGrowth > 0 ? "+" : ""}{billingData?.pendingGrowth.toFixed(1)}% from last month</p>
+                <div className="text-2xl font-bold">${(billingData?.draftCosts?.current || 0).toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground">
+                  {(billingData?.draftCosts?.growth || 0) > 0 ? "+" : ""}
+                  {(billingData?.draftCosts?.growth || 0).toFixed(1)}% from last month
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -116,8 +125,11 @@ export default function AdminBillingPage() {
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${billingData?.averageRevenuePerUser.toFixed(2) || "0.00"}</div>
-                <p className="text-xs text-muted-foreground">{billingData?.arpuGrowth > 0 ? "+" : ""}{billingData?.arpuGrowth.toFixed(1)}% from last month</p>
+                <div className="text-2xl font-bold">${((billingData?.activeCosts?.current || 0) / (billingData?.activeCosts?.current || 1)).toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground">
+                  {(billingData?.activeCosts?.growth || 0) > 0 ? "+" : ""}
+                  {(billingData?.activeCosts?.growth || 0).toFixed(1)}% from last month
+                </p>
               </CardContent>
             </Card>
           </div>

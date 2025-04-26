@@ -68,16 +68,28 @@ export async function POST(req: Request) {
     try {
       // Path to the Python script and virtual environment
       const scriptPath = path.join(process.cwd(), 'services', 'smpp', 'smpp_service.py')
-      const venvPythonPath = '/var/www/sms-panel-app/venv/bin/python3'
+      
+      // Use system Python on Windows, virtual env on Linux
+      const isWindows = process.platform === 'win32'
+      const pythonPath = isWindows ? 'python' : '/var/www/sms-panel-app/venv/bin/python3'
 
       // Check if script exists
       if (!fs.existsSync(scriptPath)) {
         throw new Error('SMS service script not found')
       }
 
-      // Check if venv Python exists
-      if (!fs.existsSync(venvPythonPath)) {
-        throw new Error('Python environment not found')
+      // Check if Python is available
+      try {
+        await new Promise((resolve, reject) => {
+          const checkPython = spawn(pythonPath, ['--version'])
+          checkPython.on('close', (code) => {
+            if (code === 0) resolve(true)
+            else reject(new Error(`Python not found at ${pythonPath}`))
+          })
+        })
+      } catch (error) {
+        console.error('Python environment error:', error)
+        throw new Error('Python environment not properly configured')
       }
 
       // Update to SENT status before sending
@@ -87,12 +99,18 @@ export async function POST(req: Request) {
       })
 
       // Spawn Python process to send SMS
-      const pythonProcess = spawn(venvPythonPath, [
+      const pythonProcess = spawn(pythonPath, [
         scriptPath,
         '--destination', recipient,
         '--message', content,
         '--source', 'TestSMPP'
       ])
+
+      // Set a timeout for the Python process
+      const timeout = setTimeout(() => {
+        pythonProcess.kill()
+        throw new Error('SMS sending timed out')
+      }, 30000) // 30 seconds timeout
 
       // Handle the Python process
       const sendSMS = new Promise((resolve, reject) => {
@@ -115,6 +133,7 @@ export async function POST(req: Request) {
         })
 
         pythonProcess.on('close', async (code) => {
+          clearTimeout(timeout)
           if (code === 0) {
             // If no delivery receipt was received, update to DELIVERED
             await prisma.message.update({
@@ -133,8 +152,13 @@ export async function POST(req: Request) {
         })
       })
 
-      // Wait for SMS to be sent
-      await sendSMS
+      // Wait for SMS to be sent with timeout
+      await Promise.race([
+        sendSMS,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('SMS sending timed out')), 30000)
+        )
+      ])
 
       // Deduct balance
       await prisma.user.update({

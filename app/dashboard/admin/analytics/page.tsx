@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BarChart3, Users, MessageSquare, TrendingUp, AlertCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 interface AnalyticsData {
   messageVolume: Array<{ date: string; count: number }>
@@ -14,6 +15,8 @@ interface AnalyticsData {
   failedMessages: number
   totalMessages: number
 }
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
 export default function AdminAnalyticsPage() {
   const { toast } = useToast()
@@ -42,7 +45,22 @@ export default function AdminAnalyticsPage() {
     }
 
     fetchAnalytics()
+    // Refresh analytics every minute
+    const interval = setInterval(fetchAnalytics, 60000)
+    return () => clearInterval(interval)
   }, [toast])
+
+  // Format dates for better display
+  const formattedMessageVolume = analytics?.messageVolume.map(item => ({
+    ...item,
+    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }))
+
+  // Format message statuses for pie chart
+  const messageStatusData = analytics?.messageStatuses.map(status => ({
+    name: status.status.toLowerCase(),
+    value: status._count
+  }))
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -116,27 +134,27 @@ export default function AdminAnalyticsPage() {
                 <CardDescription>Daily message volume over the last 30 days</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] w-full bg-muted rounded-md flex items-end justify-between p-4">
-                  {loading ? (
-                    <div className="flex items-center justify-center w-full">Loading...</div>
-                  ) : (
-                    analytics?.messageVolume.map((day, i) => {
-                      const maxCount = Math.max(...analytics.messageVolume.map(d => d.count))
-                      const height = maxCount === 0 ? 0 : (day.count / maxCount) * 100
-                      return (
-                        <div key={i} className="relative h-full w-6 flex flex-col justify-end">
-                          <div
-                            className="bg-primary rounded-sm w-full transition-all duration-500"
-                            style={{ height: `${height}%` }}
-                          ></div>
-                          <span className="text-xs text-muted-foreground mt-2">
-                            {new Date(day.date).getDate()}
-                          </span>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
+                {loading ? (
+                  <div className="h-[300px] w-full flex items-center justify-center">Loading...</div>
+                ) : (
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={formattedMessageVolume}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="date" 
+                          angle={-45}
+                          textAnchor="end"
+                          height={70}
+                          interval={0}
+                        />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="count" fill="#3b82f6" name="Messages" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -146,25 +164,31 @@ export default function AdminAnalyticsPage() {
                 <CardDescription>Current status of all messages</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
-                  {loading ? (
-                    <div>Loading...</div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-4 w-full p-4">
-                      {analytics?.messageStatuses.map((status, index) => {
-                        const percentage = (status._count / analytics.totalMessages) * 100
-                        return (
-                          <div key={index} className="flex flex-col items-center">
-                            <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center">
-                              <span className="text-2xl font-bold">{percentage.toFixed(1)}%</span>
-                            </div>
-                            <span className="mt-2 text-sm font-medium capitalize">{status.status.toLowerCase()}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
+                {loading ? (
+                  <div className="h-[300px] w-full flex items-center justify-center">Loading...</div>
+                ) : (
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={messageStatusData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {messageStatusData?.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

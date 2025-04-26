@@ -45,8 +45,17 @@ export const columns: ColumnDef<Message>[] = [
     accessorKey: "sentAt",
     header: "Sent At",
     cell: ({ row }) => {
-      const date = row.getValue("sentAt") as Date
-      return format(date, "PPp")
+      try {
+        const dateStr = row.getValue("sentAt") as string
+        const date = new Date(dateStr)
+        if (isNaN(date.getTime())) {
+          return "Invalid date"
+        }
+        return format(date, "PPp")
+      } catch (error) {
+        console.error("Error formatting date:", error)
+        return "Invalid date"
+      }
     },
   },
 ] 

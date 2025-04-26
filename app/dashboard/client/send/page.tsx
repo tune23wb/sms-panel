@@ -48,21 +48,26 @@ export default function SendSMS() {
         throw new Error(data.error || data.details || "Failed to send SMS")
       }
 
-      setIsSent(true)
-      toast({
-        title: "Success",
-        description: "Message sent successfully",
-      })
+      // Check if the message was actually sent
+      if (data.message?.status === "SENT" || data.message?.status === "DELIVERED") {
+        setIsSent(true)
+        toast({
+          title: "Success",
+          description: "Message sent successfully",
+        })
 
-      // Reset form
-      setPhoneNumber("")
-      setMessage("")
-      setMessageLength(0)
+        // Reset form
+        setPhoneNumber("")
+        setMessage("")
+        setMessageLength(0)
 
-      // Reset success state after 3 seconds
-      setTimeout(() => {
-        setIsSent(false)
-      }, 3000)
+        // Reset success state after 3 seconds
+        setTimeout(() => {
+          setIsSent(false)
+        }, 3000)
+      } else {
+        throw new Error("Message was not sent successfully")
+      }
     } catch (error) {
       console.error('Error in handleSendMessage:', error);
       toast({

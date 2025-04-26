@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
 import { BarChart3, TrendingUp, AlertCircle } from "lucide-react"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface AnalyticsData {
   messageVolume: Array<{ date: string; count: number }>
@@ -50,6 +51,12 @@ export default function AnalyticsPage() {
     return <div>Loading analytics...</div>
   }
 
+  // Format dates for better display
+  const formattedMessageVolume = analytics?.messageVolume.map(item => ({
+    ...item,
+    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }))
+
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -94,11 +101,22 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           {analytics?.messageVolume && (
-            <div className="h-[200px]">
-              {/* Add your preferred charting library here */}
-              <pre className="text-xs">
-                {JSON.stringify(analytics.messageVolume, null, 2)}
-              </pre>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={formattedMessageVolume}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={70}
+                    interval={0}
+                  />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#3b82f6" name="Messages" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
         </CardContent>
