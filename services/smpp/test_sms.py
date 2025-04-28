@@ -21,7 +21,7 @@ def test_sms():
 
     # Test message details
     TEST_NUMBER = "523317953591"  # Correct format without + prefix
-    TEST_MESSAGE = "Test message from SMPP service - " + str(datetime.now())
+    TEST_MESSAGE = "Hello, this is a test SMS"  # Simple test message
     
     logging.info(f"Connecting to SMPP server at {SMPP_HOST}:{SMPP_PORT}")
     

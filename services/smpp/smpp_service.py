@@ -56,14 +56,15 @@ class SMPPService:
             self.client.timeout = 10
 
             # Configure event handlers
-            self.client.set_message_sent_handler(self.handle_message_sent)
-            self.client.set_message_received_handler(self.handle_message_received)
+            self.client.set_message_sent_handler(lambda pdu: logging.info(f"Message sent: {pdu}"))
+            self.client.set_message_received_handler(lambda pdu: logging.info(f"Message received: {pdu}"))
             
             # Connect and bind
             self.client.connect()
             self.logger.info("Connected to SMPP server, binding...")
             
-            self.client.bind_transceiver(
+            # Bind as transmitter instead of transceiver
+            self.client.bind_transmitter(
                 system_id=self.username,
                 password=self.password,
                 system_type='',
@@ -127,7 +128,7 @@ class SMPPService:
             
             for part in parts:
                 pdu = self.client.send_message(
-                    source_addr_ton=smpplib.consts.SMPP_TON_ALPHANUMERIC,
+                    source_addr_ton=smpplib.consts.SMPP_TON_ALNUM,
                     source_addr_npi=smpplib.consts.SMPP_NPI_UNKNOWN,
                     source_addr=source_addr,
                     dest_addr_ton=smpplib.consts.SMPP_TON_INTL,
@@ -137,26 +138,18 @@ class SMPPService:
                     esm_class=msg_type_flag,
                     short_message=part,
                     registered_delivery=1 if registered_delivery else 0,
-                    priority_flag=1,  # High priority
-                    protocol_id=0,
-                    replace_if_present_flag=0,
-                    sm_default_msg_id=0,
-                    validity_period=None,  # Use default validity period
                 )
                 self.logger.debug(f"Sent PDU: {pdu}")
                 
-                # Wait for delivery receipt if requested
-                if registered_delivery:
-                    self.logger.info("Waiting for delivery receipt...")
-                    time.sleep(2)  # Give some time for the receipt to arrive
-                    self.client.listen(1)  # Listen for 1 second for any incoming PDUs
+                # Listen for any incoming PDUs (like delivery receipts)
+                self.client.listen(0.5)  # Listen for 0.5 seconds
             
             # Return final status
             result = {
-                "status": self.message_status,
+                "status": "SENT",
                 "message": "Message processed successfully"
             }
-            self.logger.info(f"Final message status: {self.message_status}")
+            self.logger.info("Message sent successfully")
             return True, json.dumps(result)
         except Exception as e:
             error_msg = f"Failed to send message: {str(e)}"
