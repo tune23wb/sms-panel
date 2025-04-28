@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DataTable } from "@/components/ui/data-table"
 import { columns } from "./columns"
 import { useToast } from "@/components/ui/use-toast"
+import { format } from "date-fns"
 
 interface Message {
   id: string
@@ -26,7 +27,14 @@ export default function HistoryPage() {
         throw new Error("Failed to fetch messages")
       }
       const data = await response.json()
-      setMessages(data.messages || [])
+      
+      // Format dates before setting messages
+      const formattedMessages = data.messages.map((msg: Message) => ({
+        ...msg,
+        createdAt: format(new Date(msg.createdAt), "PPp")
+      }))
+      
+      setMessages(formattedMessages)
     } catch (error) {
       console.error("Error fetching messages:", error)
       toast({

@@ -77,7 +77,8 @@ export async function POST(req: Request) {
           amount: smsCost,
           description: `SMS sent to ${recipient}`,
           status: "COMPLETED",
-          userId: user.id
+          userId: user.id,
+          createdAt: new Date()
         }
       })
 
@@ -121,8 +122,22 @@ export async function POST(req: Request) {
             // Update message status
             await prisma.message.update({
               where: { id: result.message.id },
-              data: { status: response.status }
+              data: { 
+                status: response.status,
+                updatedAt: new Date()
+              }
             })
+
+            // If message is delivered, update the transaction status
+            if (response.status === "DELIVERED") {
+              await prisma.transaction.update({
+                where: { id: result.transaction.id },
+                data: { 
+                  status: "COMPLETED",
+                  updatedAt: new Date()
+                }
+              })
+            }
           }
         } catch (e) {
           console.error("Error parsing SMPP response:", e)
@@ -133,10 +148,22 @@ export async function POST(req: Request) {
         error += data.toString()
       })
 
-      pythonProcess.on('close', (code) => {
+      pythonProcess.on('close', async (code) => {
         if (code === 0) {
-          resolve({ success: true, message: result.message })
+          // Get the latest message status
+          const updatedMessage = await prisma.message.findUnique({
+            where: { id: result.message.id }
+          })
+          resolve({ success: true, message: updatedMessage })
         } else {
+          // Update message status to FAILED if there was an error
+          await prisma.message.update({
+            where: { id: result.message.id },
+            data: { 
+              status: "FAILED",
+              updatedAt: new Date()
+            }
+          })
           reject(new Error(error || "Failed to send SMS"))
         }
       })

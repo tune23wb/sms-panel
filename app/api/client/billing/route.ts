@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { db } from "@/lib/db"
+import { prisma } from "@/lib/prisma"
 
 type PricingTier = "STANDARD" | "SILVER" | "GOLD" | "PLATINUM" | "CUSTOM"
 
@@ -63,7 +63,7 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const user = await db.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       include: {
         transactions: {

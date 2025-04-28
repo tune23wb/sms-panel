@@ -27,21 +27,26 @@ export default function AdminDashboard() {
   const tab = searchParams.get("tab") || "overview"
   const [metrics, setMetrics] = useState<Metrics | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
+        setLoading(true)
+        setError(null)
         const response = await fetch("/api/admin/metrics")
         if (!response.ok) {
-          throw new Error("Failed to fetch metrics")
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Failed to fetch metrics")
         }
         const data = await response.json()
         setMetrics(data)
       } catch (error) {
         console.error("Error fetching metrics:", error)
+        setError(error instanceof Error ? error.message : "Failed to load dashboard metrics")
         toast({
           title: "Error",
-          description: "Failed to load dashboard metrics",
+          description: error instanceof Error ? error.message : "Failed to load dashboard metrics",
           variant: "destructive"
         })
       } finally {
@@ -54,6 +59,27 @@ export default function AdminDashboard() {
 
   const handleTabChange = (value: string) => {
     router.push(`/dashboard/admin?tab=${value}`)
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <div className="flex items-center justify-between space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
+        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-6">
+            <p className="text-red-500 mb-4">{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Retry
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -81,7 +107,7 @@ export default function AdminDashboard() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{loading ? "..." : metrics?.totalUsers}</div>
+                <div className="text-2xl font-bold">{loading ? "..." : metrics?.totalUsers || 0}</div>
                 <p className="text-xs text-muted-foreground">Active client accounts</p>
               </CardContent>
             </Card>
@@ -91,9 +117,9 @@ export default function AdminDashboard() {
                 <MessageSquare className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{loading ? "..." : metrics?.totalMessages}</div>
+                <div className="text-2xl font-bold">{loading ? "..." : metrics?.totalMessages || 0}</div>
                 <p className="text-xs text-muted-foreground">
-                  {loading ? "..." : `${metrics?.messageGrowth.toFixed(1)}% from last month`}
+                  {loading ? "..." : `${(metrics?.messageGrowth || 0).toFixed(1)}% from last month`}
                 </p>
               </CardContent>
             </Card>
@@ -103,7 +129,7 @@ export default function AdminDashboard() {
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{loading ? "..." : metrics?.activeCampaigns}</div>
+                <div className="text-2xl font-bold">{loading ? "..." : metrics?.activeCampaigns || 0}</div>
                 <p className="text-xs text-muted-foreground">Currently running</p>
               </CardContent>
             </Card>
@@ -113,9 +139,9 @@ export default function AdminDashboard() {
                 <Settings className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{loading ? "..." : metrics?.systemStatus}</div>
+                <div className="text-2xl font-bold">{loading ? "..." : metrics?.systemStatus || "Unknown"}</div>
                 <p className="text-xs text-muted-foreground">
-                  Delivery rate: {loading ? "..." : `${metrics?.deliveryRate.toFixed(1)}%`}
+                  Delivery rate: {loading ? "..." : `${(metrics?.deliveryRate || 0).toFixed(1)}%`}
                 </p>
               </CardContent>
             </Card>

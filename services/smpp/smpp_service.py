@@ -6,13 +6,35 @@ import json
 import argparse
 from datetime import datetime
 from typing import Optional, Tuple
+import re
 
 import smpplib.gsm
 import smpplib.client
 import smpplib.consts
 
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
+# Set up logging with more details
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('smpp_service.log')
+    ]
+)
+
+def format_phone_number(phone: str) -> str:
+    """Format phone number to international format without + prefix"""
+    # Remove any non-digit characters
+    phone = re.sub(r'\D', '', phone)
+    
+    # If number starts with 0, remove it and add country code
+    if phone.startswith('0'):
+        phone = '52' + phone[1:]
+    # If number doesn't start with country code, add it
+    elif not phone.startswith('52'):
+        phone = '52' + phone
+        
+    return phone
 
 class SMPPService:
     def __init__(self, host: str, port: int, username: str, password: str):
@@ -22,70 +44,91 @@ class SMPPService:
         self.password = password
         self.client = None
         self.message_status = "PENDING"
+        self.logger = logging.getLogger('SMPPService')
 
     def connect(self) -> bool:
         """Establish connection to SMPP server"""
         try:
+            self.logger.info(f"Connecting to SMPP server {self.host}:{self.port}")
             self.client = smpplib.client.Client(self.host, self.port)
+            
+            # Set connection timeout
+            self.client.timeout = 10
+
+            # Configure event handlers
             self.client.set_message_sent_handler(self.handle_message_sent)
             self.client.set_message_received_handler(self.handle_message_received)
+            
+            # Connect and bind
             self.client.connect()
-            self.client.bind_transceiver(system_id=self.username, password=self.password)
-            logging.info("SMPP connection established successfully")
+            self.logger.info("Connected to SMPP server, binding...")
+            
+            self.client.bind_transceiver(
+                system_id=self.username,
+                password=self.password,
+                system_type='',
+                interface_version=0x34
+            )
+            self.logger.info("Successfully bound to SMPP server")
             return True
         except Exception as e:
-            logging.error(f"Failed to connect to SMPP server: {e}")
+            self.logger.error(f"Failed to connect to SMPP server: {str(e)}")
             return False
 
     def handle_message_sent(self, pdu):
         """Handle message sent confirmation"""
-        logging.info(f"Message sent PDU: {pdu}")
+        self.logger.info(f"Message sent PDU: {pdu}")
         if pdu.command == "submit_sm_resp":
-            logging.info(f"Message submitted successfully with ID: {pdu.message_id}")
+            self.logger.info(f"Message submitted successfully with ID: {pdu.message_id}")
             self.message_status = "SENT"
-            print(json.dumps({"status": "SENT", "message_id": str(pdu.message_id)}))
+            result = {
+                "status": "SENT",
+                "message_id": str(pdu.message_id)
+            }
+            print(json.dumps(result))
+            sys.stdout.flush()  # Ensure output is sent immediately
 
     def handle_message_received(self, pdu):
         """Handle incoming messages and delivery receipts"""
-        logging.info(f"Message received PDU: {pdu}")
+        self.logger.info(f"Message received PDU: {pdu}")
         if pdu.command == "deliver_sm":
             # Check if this is a delivery receipt
             if hasattr(pdu, 'receipted_message_id'):
-                logging.info(f"Delivery receipt received for message {pdu.receipted_message_id}")
+                self.logger.info(f"Delivery receipt received for message {pdu.receipted_message_id}")
                 self.message_status = "DELIVERED"
-                print(json.dumps({
+                result = {
                     "status": "DELIVERED",
                     "message_id": str(pdu.receipted_message_id)
-                }))
+                }
+                print(json.dumps(result))
+                sys.stdout.flush()  # Ensure output is sent immediately
 
     def send_message(self, 
                     destination: str, 
                     message: str, 
-                    source_addr: str = "TestSMPP",
+                    source_addr: str = "45578",
                     registered_delivery: bool = True) -> Tuple[bool, str]:
-        """
-        Send an SMS message through SMPP connection
-        
-        Args:
-            destination: Destination phone number
-            message: Message content
-            source_addr: Sender ID
-            registered_delivery: Whether to request delivery receipt
-            
-        Returns:
-            Tuple of (success: bool, error_message: str)
-        """
+        """Send an SMS message through SMPP connection"""
         if not self.client:
-            return False, json.dumps({"status": "FAILED", "error": "Not connected to SMPP server"})
+            error_msg = "Not connected to SMPP server"
+            self.logger.error(error_msg)
+            return False, json.dumps({
+                "status": "FAILED",
+                "error": error_msg
+            })
 
         try:
+            # Format the destination number
+            destination = format_phone_number(destination)
+            self.logger.info(f"Sending message to formatted number: {destination}")
+
             # Encode the message
             parts, encoding_flag, msg_type_flag = smpplib.gsm.make_parts(message)
             
             for part in parts:
                 pdu = self.client.send_message(
-                    source_addr_ton=smpplib.consts.SMPP_TON_NWSPEC,
-                    source_addr_npi=smpplib.consts.SMPP_NPI_ISDN,
+                    source_addr_ton=smpplib.consts.SMPP_TON_ALPHANUMERIC,
+                    source_addr_npi=smpplib.consts.SMPP_NPI_UNKNOWN,
                     source_addr=source_addr,
                     dest_addr_ton=smpplib.consts.SMPP_TON_INTL,
                     dest_addr_npi=smpplib.consts.SMPP_NPI_ISDN,
@@ -93,23 +136,31 @@ class SMPPService:
                     data_coding=encoding_flag,
                     esm_class=msg_type_flag,
                     short_message=part,
-                    registered_delivery=registered_delivery,
+                    registered_delivery=1 if registered_delivery else 0,
+                    priority_flag=1,  # High priority
+                    protocol_id=0,
+                    replace_if_present_flag=0,
+                    sm_default_msg_id=0,
+                    validity_period=None,  # Use default validity period
                 )
-                logging.debug(f"Sent PDU: {pdu}")
+                self.logger.debug(f"Sent PDU: {pdu}")
                 
                 # Wait for delivery receipt if requested
                 if registered_delivery:
+                    self.logger.info("Waiting for delivery receipt...")
                     time.sleep(2)  # Give some time for the receipt to arrive
                     self.client.listen(1)  # Listen for 1 second for any incoming PDUs
             
             # Return final status
-            return True, json.dumps({
+            result = {
                 "status": self.message_status,
                 "message": "Message processed successfully"
-            })
+            }
+            self.logger.info(f"Final message status: {self.message_status}")
+            return True, json.dumps(result)
         except Exception as e:
-            error_msg = f"Failed to send message: {e}"
-            logging.error(error_msg)
+            error_msg = f"Failed to send message: {str(e)}"
+            self.logger.error(error_msg)
             return False, json.dumps({
                 "status": "FAILED",
                 "error": error_msg
@@ -122,16 +173,16 @@ class SMPPService:
                 if hasattr(self.client, 'state') and self.client.state in ('BOUND_TX', 'BOUND_RX', 'BOUND_TRX'):
                     self.client.unbind()
                 self.client.disconnect()
-                logging.info("SMPP connection closed successfully")
+                self.logger.info("SMPP connection closed successfully")
             except Exception as e:
-                logging.error(f"Error while disconnecting: {e}")
+                self.logger.error(f"Error while disconnecting: {str(e)}")
 
 def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Send SMS via SMPP')
     parser.add_argument('--destination', required=True, help='Destination phone number')
     parser.add_argument('--message', required=True, help='Message content')
-    parser.add_argument('--source', default='TestSMPP', help='Sender ID')
+    parser.add_argument('--source', default='45578', help='Sender ID')
     args = parser.parse_args()
 
     # SMPP server settings
@@ -154,7 +205,22 @@ def main():
                 registered_delivery=True  # Always request delivery receipt
             )
             print(message)  # This will be captured by the Node.js process
+            sys.stdout.flush()  # Ensure output is sent immediately
             sys.exit(0 if success else 1)
+        else:
+            print(json.dumps({
+                "status": "FAILED",
+                "error": "Failed to connect to SMPP server"
+            }))
+            sys.stdout.flush()
+            sys.exit(1)
+    except Exception as e:
+        print(json.dumps({
+            "status": "FAILED",
+            "error": str(e)
+        }))
+        sys.stdout.flush()
+        sys.exit(1)
     finally:
         # Always disconnect
         smpp_service.disconnect()
