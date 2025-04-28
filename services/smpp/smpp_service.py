@@ -220,7 +220,7 @@ class SMPPService:
             
             if response.ok:
                 result = response.json()
-                self.logger.info(f"Successfully updated balance for message {message_id}")
+                self.logger.info(f"Successfully updated balance for message {message_id} with cost {message_cost}")
                 return True, result
             else:
                 self.logger.error(f"Failed to update balance: {response.text}")
@@ -234,8 +234,22 @@ class SMPPService:
         """
         Calculate message cost based on length and other factors
         """
-        # Base price in Mexican pesos
-        base_price = 0.70  # Standard tier price
+        try:
+            # Get user's pricing tier from the API
+            response = requests.get(
+                f"{self.api_base_url}/user/pricing-tier",
+                timeout=5
+            )
+            
+            if response.ok:
+                pricing_data = response.json()
+                base_price = pricing_data.get('pricePerSMS', 0.70)  # Default to standard tier price
+            else:
+                self.logger.error(f"Failed to get pricing tier: {response.text}")
+                base_price = 0.70  # Fallback to standard tier price
+        except Exception as e:
+            self.logger.error(f"Error getting pricing tier: {str(e)}")
+            base_price = 0.70  # Fallback to standard tier price
         
         # Add additional charge for long messages
         if self.message_parts > 1:
