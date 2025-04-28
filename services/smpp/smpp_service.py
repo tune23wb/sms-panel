@@ -56,8 +56,8 @@ class SMPPService:
             self.client.timeout = 10
 
             # Configure event handlers
-            self.client.set_message_sent_handler(lambda pdu: logging.info(f"Message sent: {pdu}"))
-            self.client.set_message_received_handler(lambda pdu: logging.info(f"Message received: {pdu}"))
+            self.client.set_message_sent_handler(self.handle_message_sent)
+            self.client.set_message_received_handler(self.handle_message_received)
             
             # Connect and bind
             self.client.connect()
@@ -146,10 +146,10 @@ class SMPPService:
             
             # Return final status
             result = {
-                "status": "SENT",
+                "status": self.message_status,
                 "message": "Message processed successfully"
             }
-            self.logger.info("Message sent successfully")
+            self.logger.info(f"Message status: {self.message_status}")
             return True, json.dumps(result)
         except Exception as e:
             error_msg = f"Failed to send message: {str(e)}"

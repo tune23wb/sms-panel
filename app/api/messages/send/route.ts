@@ -169,15 +169,14 @@ export async function POST(req: Request) {
       })
     })
 
-    return NextResponse.json(sendResult)
+    return NextResponse.json({
+      success: true,
+      message: result.message,
+      transaction: result.transaction,
+      remainingBalance: result.updatedUser.balance
+    })
   } catch (error) {
-    console.error("Error sending SMS:", error)
-    return NextResponse.json(
-      { 
-        error: "Failed to send SMS",
-        details: error instanceof Error ? error.message : "Unknown error"
-      },
-      { status: 500 }
-    )
+    console.error("[SMS_SEND]", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 } 
