@@ -63,12 +63,12 @@ class SMPPService:
             self.client.connect()
             self.logger.info("Connected to SMPP server, binding...")
             
-            # Bind as transmitter instead of transceiver
+            # Bind as transmitter
             self.client.bind_transmitter(
                 system_id=self.username,
                 password=self.password,
                 system_type='',
-                interface_version=0x34
+                interface_version=smpplib.consts.SMPP_VERSION_34
             )
             self.logger.info("Successfully bound to SMPP server")
             return True
@@ -129,7 +129,7 @@ class SMPPService:
             for part in parts:
                 pdu = self.client.send_message(
                     source_addr_ton=smpplib.consts.SMPP_TON_ALNUM,
-                    source_addr_npi=smpplib.consts.SMPP_NPI_UNKNOWN,
+                    source_addr_npi=smpplib.consts.SMPP_NPI_UNK,
                     source_addr=source_addr,
                     dest_addr_ton=smpplib.consts.SMPP_TON_INTL,
                     dest_addr_npi=smpplib.consts.SMPP_NPI_ISDN,
