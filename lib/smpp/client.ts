@@ -219,6 +219,17 @@ class SMPPService {
     }
 
     try {
+      console.log('Sending message with configuration:', {
+        sourceAddr: smppConfig.sourceAddr,
+        sourceAddrTon: smppConfig.sourceAddrTon,
+        sourceAddrNpi: smppConfig.sourceAddrNpi,
+        destAddr: phoneNumber,
+        destAddrTon: smppConfig.destAddrTon,
+        destAddrNpi: smppConfig.destAddrNpi,
+        registeredDelivery: smppConfig.registeredDelivery,
+        dataCoding: smppConfig.dataCoding,
+      });
+
       const result = await this.client.submit({
         sourceAddr: smppConfig.sourceAddr,
         sourceAddrTon: smppConfig.sourceAddrTon,
@@ -238,8 +249,18 @@ class SMPPService {
       });
 
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to send message:', error);
+      // Add more detailed error logging
+      if (error.response) {
+        console.error('SMPP Server Response:', error.response);
+      }
+      if (error.command) {
+        console.error('Failed Command:', error.command);
+      }
+      if (error.status) {
+        console.error('Error Status:', error.status);
+      }
       throw error;
     }
   }
