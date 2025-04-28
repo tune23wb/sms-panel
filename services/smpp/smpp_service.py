@@ -53,7 +53,7 @@ class SMPPService:
         self.delivery_event = threading.Event()
         self.listening = False
         self.listener_thread = None
-        self.api_base_url = "http://sms.tune23.com/api"  # Update to your actual domain
+        self.api_base_url = "http://64.23.163.161:3000/api"  # Server IP address
 
     def connect(self) -> bool:
         """Establish connection to SMPP server"""
