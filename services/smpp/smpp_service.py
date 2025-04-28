@@ -192,8 +192,7 @@ class SMPPService:
                     self.delivery_event.set()  # Signal that delivery receipt received
                 
                 # Always acknowledge receipt
-                self.client.send_empty_pdu('deliver_sm_resp', 
-                                          sequence=pdu.sequence)
+                self.client.send_pdu('deliver_sm_resp', sequence=pdu.sequence)
 
     def update_balance(self, message_id, status, phone_number, message_cost=1.0):
         """
