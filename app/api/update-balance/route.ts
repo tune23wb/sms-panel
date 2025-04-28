@@ -6,7 +6,15 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { message_id, status, phone_number, message_cost } = body
 
+    console.log("[BALANCE_UPDATE] Received request:", {
+      message_id,
+      status,
+      phone_number,
+      message_cost
+    })
+
     if (!message_id || !status) {
+      console.error("[BALANCE_UPDATE] Missing required fields")
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -15,6 +23,8 @@ export async function POST(req: Request) {
 
     // Start a database transaction
     const result = await prisma.$transaction(async (tx) => {
+      console.log("[BALANCE_UPDATE] Looking up message:", message_id)
+      
       // Get the message to find the user
       const message = await tx.message.findUnique({
         where: { id: message_id },
@@ -22,8 +32,15 @@ export async function POST(req: Request) {
       })
 
       if (!message) {
+        console.error("[BALANCE_UPDATE] Message not found:", message_id)
         throw new Error("Message not found")
       }
+
+      console.log("[BALANCE_UPDATE] Found message:", {
+        messageId: message.id,
+        userId: message.userId,
+        currentStatus: message.status
+      })
 
       // Update message status
       const updatedMessage = await tx.message.update({
@@ -31,9 +48,19 @@ export async function POST(req: Request) {
         data: { status }
       })
 
+      console.log("[BALANCE_UPDATE] Updated message status:", {
+        messageId: updatedMessage.id,
+        newStatus: updatedMessage.status
+      })
+
       let updatedUser = null
       // If status is SENT, deduct balance
       if (status === "SENT") {
+        console.log("[BALANCE_UPDATE] Deducting balance:", {
+          userId: message.userId,
+          amount: message_cost
+        })
+
         updatedUser = await tx.user.update({
           where: { id: message.userId },
           data: {
@@ -43,8 +70,13 @@ export async function POST(req: Request) {
           }
         })
 
+        console.log("[BALANCE_UPDATE] Updated user balance:", {
+          userId: updatedUser.id,
+          newBalance: updatedUser.balance
+        })
+
         // Create transaction record
-        await tx.transaction.create({
+        const transaction = await tx.transaction.create({
           data: {
             type: "DEBIT",
             amount: message_cost,
@@ -52,6 +84,11 @@ export async function POST(req: Request) {
             status: "COMPLETED",
             userId: message.userId
           }
+        })
+
+        console.log("[BALANCE_UPDATE] Created transaction record:", {
+          transactionId: transaction.id,
+          amount: transaction.amount
         })
       }
 
@@ -61,13 +98,15 @@ export async function POST(req: Request) {
       }
     })
 
+    console.log("[BALANCE_UPDATE] Transaction completed successfully")
+
     return NextResponse.json({
       success: true,
       message: result.message,
       new_balance: result.user.balance
     })
   } catch (error) {
-    console.error("[BALANCE_UPDATE]", error)
+    console.error("[BALANCE_UPDATE] Error:", error)
     return NextResponse.json(
       { error: "Failed to update balance" },
       { status: 500 }

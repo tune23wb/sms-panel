@@ -53,7 +53,7 @@ class SMPPService:
         self.delivery_event = threading.Event()
         self.listening = False
         self.listener_thread = None
-        self.api_base_url = "http://localhost:3000/api"  # Update this to your actual API URL
+        self.api_base_url = "http://sms.tune23.com/api"  # Update to your actual domain
 
     def connect(self) -> bool:
         """Establish connection to SMPP server"""
@@ -198,17 +198,15 @@ class SMPPService:
     def update_balance(self, message_id, status, phone_number, message_cost=1.0):
         """
         Update client balance when a message changes status
-        
-        Parameters:
-        - message_id: Message ID
-        - status: Message status (SENT, DELIVERED, FAILED)
-        - phone_number: Destination phone number
-        - message_cost: Message cost in Mexican pesos
         """
         try:
+            api_url = f"{self.api_base_url}/update-balance"
+            self.logger.info(f"Attempting to update balance at: {api_url}")
+            self.logger.info(f"Payload: message_id={message_id}, status={status}, cost={message_cost}")
+            
             # Make an API call to update balance and message status
             response = requests.post(
-                f"{self.api_base_url}/update-balance",
+                api_url,
                 json={
                     "message_id": message_id,
                     "status": status,
@@ -218,9 +216,13 @@ class SMPPService:
                 timeout=5  # 5 second timeout
             )
             
+            self.logger.info(f"API Response Status: {response.status_code}")
+            self.logger.info(f"API Response Body: {response.text}")
+            
             if response.ok:
                 result = response.json()
                 self.logger.info(f"Successfully updated balance for message {message_id} with cost {message_cost}")
+                self.logger.info(f"New balance: {result.get('new_balance')}")
                 return True, result
             else:
                 self.logger.error(f"Failed to update balance: {response.text}")
@@ -228,6 +230,7 @@ class SMPPService:
                 
         except Exception as e:
             self.logger.error(f"Error updating balance: {str(e)}")
+            self.logger.exception("Full error traceback:")
             return False, {"error": str(e)}
     
     def calculate_message_cost(self):
