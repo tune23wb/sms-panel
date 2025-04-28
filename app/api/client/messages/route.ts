@@ -39,7 +39,13 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json({ messages })
+    // Format the messages with proper date strings
+    const formattedMessages = messages.map(message => ({
+      ...message,
+      createdAt: message.createdAt.toISOString() // Ensure date is properly serialized
+    }))
+
+    return NextResponse.json({ messages: formattedMessages })
   } catch (error) {
     console.error("Error fetching messages:", error)
     return NextResponse.json(

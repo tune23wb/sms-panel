@@ -58,15 +58,42 @@ export async function POST(req: Request) {
       )
     }
 
-    // Create initial message record
-    const message = await prisma.message.create({
-      data: {
-        content,
-        phoneNumber: recipient,
-        userId: user.id,
-        campaignId,
-        status: "PENDING"
-      }
+    // Start a transaction to ensure atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // Deduct balance and create transaction record
+      const updatedUser = await tx.user.update({
+        where: { id: user.id },
+        data: {
+          balance: {
+            decrement: smsCost
+          }
+        }
+      })
+
+      // Create transaction record
+      const transaction = await tx.transaction.create({
+        data: {
+          type: "DEBIT",
+          amount: smsCost,
+          description: `SMS sent to ${recipient}`,
+          status: "COMPLETED",
+          userId: user.id
+        }
+      })
+
+      // Create initial message record
+      const message = await tx.message.create({
+        data: {
+          content,
+          phoneNumber: recipient,
+          userId: user.id,
+          campaignId,
+          status: "PENDING",
+          createdAt: new Date()
+        }
+      })
+
+      return { message, transaction, updatedUser }
     })
 
     // Path to Python script
@@ -93,44 +120,12 @@ export async function POST(req: Request) {
           if (response.status === "SENT" || response.status === "DELIVERED") {
             // Update message status
             await prisma.message.update({
-              where: { id: message.id },
+              where: { id: result.message.id },
               data: { status: response.status }
             })
-
-            // If message is delivered, process the balance deduction
-            if (response.status === "DELIVERED") {
-              try {
-                // Deduct balance and create transaction record
-                const result = await prisma.$transaction([
-                  // Deduct balance
-                  prisma.user.update({
-                    where: { id: user.id },
-                    data: {
-                      balance: {
-                        decrement: smsCost
-                      }
-                    }
-                  }),
-                  // Create transaction record
-                  prisma.transaction.create({
-                    data: {
-                      type: "DEBIT",
-                      amount: smsCost,
-                      description: `SMS sent to ${recipient}`,
-                      status: "COMPLETED",
-                      userId: user.id
-                    }
-                  })
-                ])
-              } catch (txError) {
-                console.error("Transaction error:", txError)
-                // Don't reject here as the message was still delivered
-              }
-            }
           }
         } catch (e) {
-          // Not JSON data, just accumulate the output
-          console.log('Non-JSON output:', dataStr)
+          console.error("Error parsing SMPP response:", e)
         }
       })
 
@@ -138,51 +133,12 @@ export async function POST(req: Request) {
         error += data.toString()
       })
 
-      pythonProcess.on('close', async (code) => {
-        try {
-          const finalOutput = output.trim()
-          let finalResponse
-          
-          try {
-            // Try to parse the last line as JSON
-            const lines = finalOutput.split('\n')
-            finalResponse = JSON.parse(lines[lines.length - 1])
-          } catch (e) {
-            finalResponse = { status: "FAILED", error: finalOutput || error || 'Unknown error' }
-          }
-
-          if (finalResponse.status === "FAILED") {
-            // Update message status to FAILED
-            await prisma.message.update({
-              where: { id: message.id },
-              data: { status: "FAILED" }
-            })
-            reject(new Error(finalResponse.error || 'Failed to send SMS'))
-          } else {
-            // Get the latest message status
-            const updatedMessage = await prisma.message.findUnique({
-              where: { id: message.id }
-            })
-            resolve({ success: true, message: updatedMessage })
-          }
-        } catch (e) {
-          console.error("Error processing Python script output:", e)
-          // Update message status to FAILED
-          await prisma.message.update({
-            where: { id: message.id },
-            data: { status: "FAILED" }
-          })
-          reject(new Error("Failed to process SMS sending result"))
+      pythonProcess.on('close', (code) => {
+        if (code === 0) {
+          resolve({ success: true, message: result.message })
+        } else {
+          reject(new Error(error || "Failed to send SMS"))
         }
-      })
-
-      pythonProcess.on('error', async (err) => {
-        // Update message status to FAILED
-        await prisma.message.update({
-          where: { id: message.id },
-          data: { status: "FAILED" }
-        })
-        reject(new Error(`Failed to start Python process: ${err.message}`))
       })
     })
 

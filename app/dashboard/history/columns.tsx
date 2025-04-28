@@ -6,15 +6,15 @@ import { format } from "date-fns"
 
 export type Message = {
   id: string
-  recipient: string
+  phoneNumber: string
   content: string
-  status: "sent" | "delivered" | "failed"
-  sentAt: Date
+  status: string
+  createdAt: string
 }
 
 export const columns: ColumnDef<Message>[] = [
   {
-    accessorKey: "recipient",
+    accessorKey: "phoneNumber",
     header: "Recipient",
   },
   {
@@ -29,29 +29,33 @@ export const columns: ColumnDef<Message>[] = [
       return (
         <Badge
           variant={
-            status === "sent"
+            status === "SENT"
               ? "default"
-              : status === "delivered"
+              : status === "DELIVERED"
               ? "secondary"
+              : status === "PENDING"
+              ? "outline"
               : "destructive"
           }
         >
-          {status}
+          {status.toUpperCase()}
         </Badge>
       )
     },
   },
   {
-    accessorKey: "sentAt",
+    accessorKey: "createdAt",
     header: "Sent At",
     cell: ({ row }) => {
+      const dateStr = row.getValue("createdAt") as string
+      if (!dateStr) return "N/A"
+      
       try {
-        const dateStr = row.getValue("sentAt") as string
         const date = new Date(dateStr)
         if (isNaN(date.getTime())) {
           return "Invalid date"
         }
-        return format(date, "PPp")
+        return format(date, "PPp") // Format as "Apr 29, 2023, 9:30 AM"
       } catch (error) {
         console.error("Error formatting date:", error)
         return "Invalid date"
