@@ -39,7 +39,7 @@ export async function POST(req: Request) {
         try {
           // Call the Python SMPP service script
           const { stdout, stderr } = await execAsync(
-            `python3 services/smpp/smpp_service.py --destination "${message.number}" --message "${message.message}"`
+            `python3 /var/www/sms-panel-app/sms-panel/sms-panel/services/smpp/smpp_service.py --destination "${message.number}" --message "${message.message}"`
           )
 
           if (stderr) {

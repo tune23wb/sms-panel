@@ -372,6 +372,12 @@ class SMPPService:
                 self.logger.error(f"Error while disconnecting: {str(e)}")
 
 def main():
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Send SMS via SMPP')
+    parser.add_argument('--destination', required=True, help='Destination phone number')
+    parser.add_argument('--message', required=True, help='Message content')
+    args = parser.parse_args()
+
     # SMPP server configuration
     SMPP_HOST = "114.199.74.35"
     SMPP_PORT = 2775
@@ -385,9 +391,23 @@ def main():
         service.start_listener()
         
         try:
-            # Keep the service running
-            while True:
-                time.sleep(1)
+            # Send the message
+            success, result = service.send_message(
+                destination=args.destination,
+                message=args.message
+            )
+            
+            if success:
+                print(result)
+            else:
+                print(f"Failed to send message: {result}")
+                sys.exit(1)
+                
+            # Wait a bit for delivery report
+            time.sleep(5)
+            
+            service.stop_listener()
+            service.disconnect()
         except KeyboardInterrupt:
             service.stop_listener()
             service.disconnect()
