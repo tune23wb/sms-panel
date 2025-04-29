@@ -101,6 +101,42 @@ export default function UsersPage() {
     }
   }
 
+  const handleUpdateBalance = async (userId: string, type: "CREDIT" | "DEBIT", amount: number) => {
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/balance`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type,
+          amount,
+          description: `Balance ${type.toLowerCase()}ed by admin`
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to update balance')
+      }
+
+      toast({
+        title: "Success",
+        description: `User balance ${type.toLowerCase()}ed successfully`,
+      })
+
+      // Refresh user list
+      await fetchUsers()
+    } catch (error) {
+      console.error('Error updating balance:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update balance",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleCreateClient = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -226,6 +262,7 @@ export default function UsersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Balance</TableHead>
                   <TableHead>Last Active</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -233,13 +270,13 @@ export default function UsersPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       Loading users...
                     </TableCell>
                   </TableRow>
                 ) : filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -263,6 +300,9 @@ export default function UsersPage() {
                           <span>{user.status}</span>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        ${user.balance?.toFixed(2) || "0.00"}
+                      </TableCell>
                       <TableCell>{user.lastActive}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -276,6 +316,23 @@ export default function UsersPage() {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem>View Details</DropdownMenuItem>
                             <DropdownMenuItem>Edit User</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => {
+                              const amount = window.prompt("Enter amount to credit:")
+                              if (amount && !isNaN(Number(amount)) && Number(amount) > 0) {
+                                handleUpdateBalance(user.id, "CREDIT", Number(amount))
+                              }
+                            }}>
+                              Add Balance
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              const amount = window.prompt("Enter amount to debit:")
+                              if (amount && !isNaN(Number(amount)) && Number(amount) > 0) {
+                                handleUpdateBalance(user.id, "DEBIT", Number(amount))
+                              }
+                            }}>
+                              Deduct Balance
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem>Reset Password</DropdownMenuItem>
                             {user.status === "Active" ? (
