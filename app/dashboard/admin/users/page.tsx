@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import { ViewUserDialog, EditUserDialog, ResetPasswordDialog } from "@/components/dialogs"
 
 interface User {
   id: string
@@ -35,6 +36,10 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [viewDetailsOpen, setViewDetailsOpen] = useState(false)
+  const [editUserOpen, setEditUserOpen] = useState(false)
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
   const createClientFormRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -315,8 +320,18 @@ export default function UsersPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>View Details</DropdownMenuItem>
-                            <DropdownMenuItem>Edit User</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedUser(user)
+                              setViewDetailsOpen(true)
+                            }}>
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedUser(user)
+                              setEditUserOpen(true)
+                            }}>
+                              Edit User
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => {
                               const amount = window.prompt("Enter amount to credit:")
@@ -335,7 +350,12 @@ export default function UsersPage() {
                               Deduct Balance
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>Reset Password</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedUser(user)
+                              setResetPasswordOpen(true)
+                            }}>
+                              Reset Password
+                            </DropdownMenuItem>
                             {user.status === "Active" ? (
                               <DropdownMenuItem onClick={() => handleStatusChange(user.id, "Suspended")}>
                                 Suspend User
@@ -418,6 +438,26 @@ export default function UsersPage() {
           </form>
         </CardContent>
       </Card>
+      {selectedUser && (
+        <>
+          <ViewUserDialog
+            user={selectedUser}
+            open={viewDetailsOpen}
+            onOpenChange={setViewDetailsOpen}
+          />
+          <EditUserDialog
+            user={selectedUser}
+            open={editUserOpen}
+            onOpenChange={setEditUserOpen}
+            onUserUpdated={fetchUsers}
+          />
+          <ResetPasswordDialog
+            userId={selectedUser.id}
+            open={resetPasswordOpen}
+            onOpenChange={setResetPasswordOpen}
+          />
+        </>
+      )}
     </div>
   )
 }
