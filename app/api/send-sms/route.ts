@@ -39,15 +39,9 @@ const PRICING_TIERS = {
 
 async function sendSMPPMessage(phoneNumber: string, message: string) {
   try {
-    const response = await axios.post('http://64.23.163.161:3000/api/smpp/send', {
+    const response = await axios.post('http://localhost:3001/api/smpp/send', {
       destination: phoneNumber,
-      message: message,
-      source_addr: "45578"
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer smpp_internal_key'
-      }
+      message: message
     });
     return response.data;
   } catch (error) {

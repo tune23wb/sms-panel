@@ -97,9 +97,11 @@ export async function POST(req: Request) {
       return { message, transaction, user: updatedUser }
     })
 
-    // Path to Python script
+    // Path to Python script and virtual environment
     const scriptPath = path.join(process.cwd(), 'services', 'smpp', 'smpp_service.py')
-    const pythonProcess = spawn('python3', [
+    const venvPythonPath = path.join(process.cwd(), 'services', 'smpp', 'venv', 'bin', 'python3')
+    
+    const pythonProcess = spawn(venvPythonPath, [
       scriptPath,
       '--destination', recipient,
       '--message', content
