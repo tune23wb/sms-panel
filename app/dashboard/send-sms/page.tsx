@@ -196,14 +196,14 @@ export default function SendBulkSMSPage() {
       const results = []
       for (const message of messages) {
         try {
-          const response = await fetch("/api/sms", {
+          const response = await fetch("/api/messages/send", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              destination: message.number,
-              message: message.message,
+              recipient: message.number,
+              content: message.message,
             }),
           })
 
