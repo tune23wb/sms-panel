@@ -25,3 +25,30 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Backend files
+backend/node_modules/
+backend/package-lock.json
+backend/*.log
+backend/ecosystem.config.js
+
+# Log files
+*.log
+smpp_service.log
+smpp-combined.log
+smpp-error.log
+
+# Python virtual environment
+venv/
+services/smpp/venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Backup files
+*.bak
+backup/
