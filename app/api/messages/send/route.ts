@@ -173,7 +173,7 @@ export async function POST(req: Request) {
       success: true,
       message: result.message,
       transaction: result.transaction,
-      remainingBalance: (await prisma.user.findUnique({ where: { id: user.id } }))?.balance || 0
+      remainingBalance: result.user.balance
     })
   } catch (error) {
     console.error("[SMS_SEND]", error)
