@@ -210,6 +210,7 @@ class SMPPService:
             api_url = f"{self.api_base_url}/update-balance"
             self.logger.info(f"Attempting to update balance at: {api_url}")
             self.logger.info(f"Payload: message_id={message_id}, status={status}, cost={message_cost}")
+            self.logger.info(f"Using API headers: {self.api_headers}")
             
             # Make an API call to update balance and message status
             response = requests.post(
@@ -225,6 +226,7 @@ class SMPPService:
             )
             
             self.logger.info(f"API Response Status: {response.status_code}")
+            self.logger.info(f"API Response Headers: {response.headers}")
             self.logger.info(f"API Response Body: {response.text}")
             
             if response.ok:
@@ -233,13 +235,15 @@ class SMPPService:
                 self.logger.info(f"New balance: {result.get('new_balance')}")
                 return True, result
             else:
-                self.logger.error(f"Failed to update balance: {response.text}")
-                return False, {"error": response.text}
+                error_msg = f"Failed to update balance: {response.text}"
+                self.logger.error(error_msg)
+                return False, {"error": error_msg}
                 
         except Exception as e:
-            self.logger.error(f"Error updating balance: {str(e)}")
+            error_msg = f"Error updating balance: {str(e)}"
+            self.logger.error(error_msg)
             self.logger.exception("Full error traceback:")
-            return False, {"error": str(e)}
+            return False, {"error": error_msg}
     
     def calculate_message_cost(self):
         """

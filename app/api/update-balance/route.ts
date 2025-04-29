@@ -121,8 +121,10 @@ export async function POST(req: Request) {
     })
   } catch (error) {
     console.error("[BALANCE_UPDATE] Error:", error)
+    // Return more specific error message
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
     return NextResponse.json(
-      { error: "Failed to update balance" },
+      { error: `Failed to update balance: ${errorMessage}` },
       { status: 500 }
     )
   }
