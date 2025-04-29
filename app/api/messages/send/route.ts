@@ -72,6 +72,16 @@ export async function POST(req: Request) {
         }
       })
 
+      // Update user balance
+      const updatedUser = await tx.user.update({
+        where: { id: user.id },
+        data: {
+          balance: {
+            decrement: smsCost
+          }
+        }
+      })
+
       // Create initial message record
       const message = await tx.message.create({
         data: {
@@ -84,7 +94,7 @@ export async function POST(req: Request) {
         }
       })
 
-      return { message, transaction, user }
+      return { message, transaction, user: updatedUser }
     })
 
     // Path to Python script
