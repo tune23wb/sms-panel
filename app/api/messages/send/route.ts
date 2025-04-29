@@ -2,8 +2,6 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { spawn } from 'child_process'
-import path from 'path'
 
 const PRICE_PER_SMS = 0.70 // MXN per SMS
 
@@ -97,84 +95,52 @@ export async function POST(req: Request) {
       return { message, transaction, user: updatedUser }
     })
 
-    // Path to Python script and virtual environment
-    const scriptPath = '/var/www/sms-panel-app/sms-panel/sms-panel/services/smpp/smpp_service.py'
-    const venvPath = '/var/www/sms-panel-app/sms-panel/sms-panel/services/smpp/venv'
+    // Send message through SMPP HTTP service
+    const smppResponse = await fetch('http://localhost:3001/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        destination: recipient,
+        message: content,
+        source_addr: "45578"
+      })
+    });
 
-    const pythonProcess = spawn(venvPath + '/bin/python3', [
-      scriptPath,
-      '--destination', recipient,
-      '--message', content
-    ], {
-      env: {
-        ...process.env,
-        PYTHONPATH: venvPath + '/lib/python3.12/site-packages'
-      }
-    })
+    if (!smppResponse.ok) {
+      throw new Error(`SMPP service returned ${smppResponse.status}`);
+    }
 
-    // Create a promise to handle the Python script execution
-    const sendResult = await new Promise((resolve, reject) => {
-      let output = ''
-      let error = ''
+    const smppResult = await smppResponse.json();
 
-      pythonProcess.stdout.on('data', async (data) => {
-        const dataStr = data.toString()
-        output += dataStr
-        
-        try {
-          // Try to parse JSON response
-          const response = JSON.parse(dataStr)
-          
-          if (response.status === "SENT" || response.status === "DELIVERED") {
-            // Update message status
-            await prisma.message.update({
-              where: { id: result.message.id },
-              data: { 
-                status: response.status,
-                updatedAt: new Date()
-              }
-            })
-
-            // Update transaction status for both SENT and DELIVERED states
-            if (response.status === "SENT" || response.status === "DELIVERED") {
-              await prisma.transaction.update({
-                where: { id: result.transaction.id },
-                data: { 
-                  status: "COMPLETED",
-                  updatedAt: new Date()
-                }
-              })
-            }
-          }
-        } catch (e) {
-          console.error("Error parsing SMPP response:", e)
+    // Update message status based on SMPP result
+    if (smppResult.success) {
+      await prisma.message.update({
+        where: { id: result.message.id },
+        data: { 
+          status: "SENT",
+          updatedAt: new Date()
         }
-      })
+      });
 
-      pythonProcess.stderr.on('data', (data) => {
-        error += data.toString()
-      })
-
-      pythonProcess.on('close', async (code) => {
-        if (code === 0) {
-          // Get the latest message status
-          const updatedMessage = await prisma.message.findUnique({
-            where: { id: result.message.id }
-          })
-          resolve({ success: true, message: updatedMessage })
-        } else {
-          // Update message status to FAILED if there was an error
-          await prisma.message.update({
-            where: { id: result.message.id },
-            data: { 
-              status: "FAILED",
-              updatedAt: new Date()
-            }
-          })
-          reject(new Error(error || "Failed to send SMS"))
+      await prisma.transaction.update({
+        where: { id: result.transaction.id },
+        data: { 
+          status: "COMPLETED",
+          updatedAt: new Date()
         }
-      })
-    })
+      });
+    } else {
+      await prisma.message.update({
+        where: { id: result.message.id },
+        data: { 
+          status: "FAILED",
+          updatedAt: new Date()
+        }
+      });
+      throw new Error(smppResult.error || "Failed to send SMS");
+    }
 
     return NextResponse.json({
       success: true,
