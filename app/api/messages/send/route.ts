@@ -60,23 +60,13 @@ export async function POST(req: Request) {
 
     // Start a transaction to ensure atomicity
     const result = await prisma.$transaction(async (tx) => {
-      // Deduct balance and create transaction record
-      const updatedUser = await tx.user.update({
-        where: { id: user.id },
-        data: {
-          balance: {
-            decrement: smsCost
-          }
-        }
-      })
-
-      // Create transaction record
+      // Create initial transaction record in PENDING state
       const transaction = await tx.transaction.create({
         data: {
           type: "DEBIT",
           amount: smsCost,
           description: `SMS sent to ${recipient}`,
-          status: "COMPLETED",
+          status: "PENDING",
           userId: user.id,
           createdAt: new Date()
         }
@@ -94,7 +84,7 @@ export async function POST(req: Request) {
         }
       })
 
-      return { message, transaction, updatedUser }
+      return { message, transaction, user }
     })
 
     // Path to Python script
@@ -128,8 +118,8 @@ export async function POST(req: Request) {
               }
             })
 
-            // If message is delivered, update the transaction status
-            if (response.status === "DELIVERED") {
+            // Update transaction status for both SENT and DELIVERED states
+            if (response.status === "SENT" || response.status === "DELIVERED") {
               await prisma.transaction.update({
                 where: { id: result.transaction.id },
                 data: { 
@@ -173,7 +163,7 @@ export async function POST(req: Request) {
       success: true,
       message: result.message,
       transaction: result.transaction,
-      remainingBalance: result.updatedUser.balance
+      remainingBalance: (await prisma.user.findUnique({ where: { id: user.id } }))?.balance || 0
     })
   } catch (error) {
     console.error("[SMS_SEND]", error)
