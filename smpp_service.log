@@ -1,0 +1,113 @@
+2025-04-28 15:07:59,555 - root - INFO - Connecting to SMPP server at 114.199.74.35:2775
+2025-04-28 15:07:59,555 - SMPPService - INFO - Connecting to SMPP server 114.199.74.35:2775
+2025-04-28 15:07:59,557 - smpp.Client.1863135320000 - INFO - Connecting to 114.199.74.35:2775...
+2025-04-28 15:07:59,809 - SMPPService - INFO - Connected to SMPP server, binding...
+2025-04-28 15:07:59,809 - smpp.Client.1863135320000 - DEBUG - Receiver mode
+2025-04-28 15:07:59,811 - smpp.Client.1863135320000 - DEBUG - Sending bind_transceiver PDU
+2025-04-28 15:07:59,812 - smpp.Client.1863135320000 - DEBUG - >>b'00000029000000090000000000000002585142303231334d4b54006653356367683236000034000000' (41 bytes)
+2025-04-28 15:07:59,814 - smpp.Client.1863135320000 - DEBUG - Waiting for PDU...
+2025-04-28 15:08:00,050 - smpp.Client.1863135320000 - DEBUG - <<b'000000168000000900000000000000026c6967687400' (22 bytes)
+2025-04-28 15:08:00,051 - smpp.Client.1863135320000 - DEBUG - Read bind_transceiver_resp PDU
+2025-04-28 15:08:00,051 - SMPPService - INFO - Successfully bound to SMPP server
+2025-04-28 15:08:00,051 - root - INFO - Successfully connected to SMPP server
+2025-04-28 15:08:00,051 - root - INFO - Attempting to send message to 523317953591
+2025-04-28 15:08:00,051 - SMPPService - INFO - Sending message to formatted number: 523317953591
+2025-04-28 15:08:00,051 - SMPPService - ERROR - Failed to send message: module 'smpplib.consts' has no attribute 'SMPP_TON_ALPHANUMERIC'
+2025-04-28 15:08:00,053 - root - ERROR - Failed: {"status": "FAILED", "error": "Failed to send message: module 'smpplib.consts' has no attribute 'SMPP_TON_ALPHANUMERIC'"}
+2025-04-28 15:08:00,053 - smpp.Client.1863135320000 - INFO - Disconnecting...
+2025-04-28 15:08:00,053 - smpp.Client.1863135320000 - WARNING - <smpplib.client.Client object at 0x000001B1CB84D7C0> is disconnecting in the bound state
+2025-04-28 15:08:00,053 - SMPPService - INFO - SMPP connection closed successfully
+2025-04-28 15:08:00,054 - root - INFO - Test completed
+2025-04-28 15:08:29,466 - root - INFO - Connecting to SMPP server at 114.199.74.35:2775
+2025-04-28 15:08:29,466 - SMPPService - INFO - Connecting to SMPP server 114.199.74.35:2775
+2025-04-28 15:08:29,467 - smpp.Client.2322149595072 - INFO - Connecting to 114.199.74.35:2775...
+2025-04-28 15:08:29,701 - SMPPService - INFO - Connected to SMPP server, binding...
+2025-04-28 15:08:29,701 - smpp.Client.2322149595072 - DEBUG - Receiver mode
+2025-04-28 15:08:29,701 - smpp.Client.2322149595072 - DEBUG - Sending bind_transceiver PDU
+2025-04-28 15:08:29,702 - smpp.Client.2322149595072 - DEBUG - >>b'00000029000000090000000000000002585142303231334d4b54006653356367683236000034000000' (41 bytes)
+2025-04-28 15:08:29,702 - smpp.Client.2322149595072 - DEBUG - Waiting for PDU...
+2025-04-28 15:08:29,937 - smpp.Client.2322149595072 - DEBUG - <<b'000000168000000900000000000000026c6967687400' (22 bytes)
+2025-04-28 15:08:29,937 - smpp.Client.2322149595072 - DEBUG - Read bind_transceiver_resp PDU
+2025-04-28 15:08:29,938 - SMPPService - INFO - Successfully bound to SMPP server
+2025-04-28 15:08:29,939 - root - INFO - Successfully connected to SMPP server
+2025-04-28 15:08:29,940 - root - INFO - Attempting to send message to 523317953591
+2025-04-28 15:08:29,941 - SMPPService - INFO - Sending message to formatted number: 523317953591
+2025-04-28 15:08:29,942 - SMPPService - ERROR - Failed to send message: module 'smpplib.consts' has no attribute 'SMPP_NPI_UNKNOWN'
+2025-04-28 15:08:29,942 - root - ERROR - Failed: {"status": "FAILED", "error": "Failed to send message: module 'smpplib.consts' has no attribute 'SMPP_NPI_UNKNOWN'"}
+2025-04-28 15:08:29,943 - smpp.Client.2322149595072 - INFO - Disconnecting...
+2025-04-28 15:08:29,943 - smpp.Client.2322149595072 - WARNING - <smpplib.client.Client object at 0x0000021CAAE6D7C0> is disconnecting in the bound state
+2025-04-28 15:08:29,944 - SMPPService - INFO - SMPP connection closed successfully
+2025-04-28 15:08:29,945 - root - INFO - Test completed
+2025-04-28 15:08:50,305 - root - INFO - Connecting to SMPP server at 114.199.74.35:2775
+2025-04-28 15:08:50,307 - SMPPService - INFO - Connecting to SMPP server 114.199.74.35:2775
+2025-04-28 15:08:50,308 - smpp.Client.1802887000960 - INFO - Connecting to 114.199.74.35:2775...
+2025-04-28 15:08:50,552 - SMPPService - INFO - Connected to SMPP server, binding...
+2025-04-28 15:08:50,552 - smpp.Client.1802887000960 - DEBUG - Receiver mode
+2025-04-28 15:08:50,552 - smpp.Client.1802887000960 - DEBUG - Sending bind_transceiver PDU
+2025-04-28 15:08:50,553 - smpp.Client.1802887000960 - DEBUG - >>b'00000029000000090000000000000002585142303231334d4b54006653356367683236000034000000' (41 bytes)
+2025-04-28 15:08:50,553 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:08:50,986 - smpp.Client.1802887000960 - DEBUG - <<b'000000168000000900000000000000026c6967687400' (22 bytes)
+2025-04-28 15:08:50,987 - smpp.Client.1802887000960 - DEBUG - Read bind_transceiver_resp PDU
+2025-04-28 15:08:50,987 - SMPPService - INFO - Successfully bound to SMPP server
+2025-04-28 15:08:50,987 - root - INFO - Successfully connected to SMPP server
+2025-04-28 15:08:50,987 - root - INFO - Attempting to send message to 523317953591
+2025-04-28 15:08:50,987 - SMPPService - INFO - Sending message to formatted number: 523317953591
+2025-04-28 15:08:50,988 - smpp.Client.1802887000960 - DEBUG - Sending submit_sm PDU
+2025-04-28 15:08:50,988 - smpp.Client.1802887000960 - DEBUG - >>b'0000006d0000000400000000000000030005003435353738000101353233333137393533353931000000010000010000003b54657374206d6573736167652066726f6d20534d50502073657276696365202d20323032352d30342d32382031353a30383a35302e333035303538' (109 bytes)
+2025-04-28 15:08:50,989 - SMPPService - DEBUG - Sent PDU: <smpplib.command.SubmitSM object at 0x000001A3C4BA6A80>
+2025-04-28 15:08:50,989 - SMPPService - INFO - Waiting for delivery receipt...
+2025-04-28 15:08:52,991 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:08:52,991 - smpp.Client.1802887000960 - DEBUG - <<b'00000019800000040000000000000003323331633161353700' (25 bytes)
+2025-04-28 15:08:52,991 - smpp.Client.1802887000960 - DEBUG - Read submit_sm_resp PDU
+2025-04-28 15:08:52,991 - SMPPService - INFO - Message sent PDU: <smpplib.command.SubmitSMResp object at 0x000001A3C4BA6C00>
+2025-04-28 15:08:52,991 - SMPPService - INFO - Message submitted successfully with ID: b'231c1a57'
+2025-04-28 15:08:52,991 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:08:57,997 - smpp.Client.1802887000960 - DEBUG - Socket timeout, listening again
+2025-04-28 15:08:57,998 - smpp.Client.1802887000960 - DEBUG - Sending enquire_link PDU
+2025-04-28 15:08:57,998 - smpp.Client.1802887000960 - DEBUG - >>b'00000010000000150000000000000004' (16 bytes)
+2025-04-28 15:08:57,998 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:08:58,424 - smpp.Client.1802887000960 - DEBUG - <<b'00000010800000150000000000000004' (16 bytes)
+2025-04-28 15:08:58,426 - smpp.Client.1802887000960 - DEBUG - Read enquire_link_resp PDU
+2025-04-28 15:08:58,426 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:09:03,016 - smpp.Client.1802887000960 - DEBUG - <<b'000000990000000500000000000000010001013532333331373935333539310005003435353738000400000000000000006769643a3233316331613537207375623a30303120646c7672643a303031207375626d697420646174653a3235303432393035303820646f6e6520646174653a3235303432393035303920737461743a44454c49565244206572723a30303020746578743a303030' (153 bytes)
+2025-04-28 15:09:03,017 - smpp.Client.1802887000960 - DEBUG - Read deliver_sm PDU
+2025-04-28 15:09:03,018 - SMPPService - INFO - Message received PDU: <smpplib.command.DeliverSM object at 0x000001A3C4BA6C00>
+2025-04-28 15:09:03,019 - SMPPService - INFO - Delivery receipt received for message None
+2025-04-28 15:09:03,019 - smpp.Client.1802887000960 - DEBUG - Sending deliver_sm_resp PDU
+2025-04-28 15:09:03,019 - smpp.Client.1802887000960 - DEBUG - >>b'0000001180000005000000000000000100' (17 bytes)
+2025-04-28 15:09:03,021 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:09:08,030 - smpp.Client.1802887000960 - DEBUG - Socket timeout, listening again
+2025-04-28 15:09:08,031 - smpp.Client.1802887000960 - DEBUG - Sending enquire_link PDU
+2025-04-28 15:09:08,031 - smpp.Client.1802887000960 - DEBUG - >>b'00000010000000150000000000000006' (16 bytes)
+2025-04-28 15:09:08,032 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:09:08,376 - smpp.Client.1802887000960 - DEBUG - <<b'00000010800000150000000000000006' (16 bytes)
+2025-04-28 15:09:08,377 - smpp.Client.1802887000960 - DEBUG - Read enquire_link_resp PDU
+2025-04-28 15:09:08,377 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:09:13,379 - smpp.Client.1802887000960 - DEBUG - Socket timeout, listening again
+2025-04-28 15:09:13,379 - smpp.Client.1802887000960 - DEBUG - Sending enquire_link PDU
+2025-04-28 15:09:13,380 - smpp.Client.1802887000960 - DEBUG - >>b'00000010000000150000000000000007' (16 bytes)
+2025-04-28 15:09:13,380 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:09:13,736 - smpp.Client.1802887000960 - DEBUG - <<b'00000010800000150000000000000007' (16 bytes)
+2025-04-28 15:09:13,736 - smpp.Client.1802887000960 - DEBUG - Read enquire_link_resp PDU
+2025-04-28 15:09:13,738 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:09:18,742 - smpp.Client.1802887000960 - DEBUG - Socket timeout, listening again
+2025-04-28 15:09:18,743 - smpp.Client.1802887000960 - DEBUG - Sending enquire_link PDU
+2025-04-28 15:09:18,743 - smpp.Client.1802887000960 - DEBUG - >>b'00000010000000150000000000000008' (16 bytes)
+2025-04-28 15:09:18,743 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:09:19,099 - smpp.Client.1802887000960 - DEBUG - <<b'00000010800000150000000000000008' (16 bytes)
+2025-04-28 15:09:19,099 - smpp.Client.1802887000960 - DEBUG - Read enquire_link_resp PDU
+2025-04-28 15:09:19,100 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:09:24,111 - smpp.Client.1802887000960 - DEBUG - Socket timeout, listening again
+2025-04-28 15:09:24,111 - smpp.Client.1802887000960 - DEBUG - Sending enquire_link PDU
+2025-04-28 15:09:24,112 - smpp.Client.1802887000960 - DEBUG - >>b'00000010000000150000000000000009' (16 bytes)
+2025-04-28 15:09:24,112 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:09:24,454 - smpp.Client.1802887000960 - DEBUG - <<b'00000010800000150000000000000009' (16 bytes)
+2025-04-28 15:09:24,455 - smpp.Client.1802887000960 - DEBUG - Read enquire_link_resp PDU
+2025-04-28 15:09:24,456 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:09:29,457 - smpp.Client.1802887000960 - DEBUG - Socket timeout, listening again
+2025-04-28 15:09:29,457 - smpp.Client.1802887000960 - DEBUG - Sending enquire_link PDU
+2025-04-28 15:09:29,457 - smpp.Client.1802887000960 - DEBUG - >>b'0000001000000015000000000000000a' (16 bytes)
+2025-04-28 15:09:29,458 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
+2025-04-28 15:09:29,817 - smpp.Client.1802887000960 - DEBUG - <<b'0000001080000015000000000000000a' (16 bytes)
+2025-04-28 15:09:29,818 - smpp.Client.1802887000960 - DEBUG - Read enquire_link_resp PDU
+2025-04-28 15:09:29,820 - smpp.Client.1802887000960 - DEBUG - Waiting for PDU...
