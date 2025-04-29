@@ -23,7 +23,9 @@ module.exports = {
       name: 'sms-panel-smp',
       script: 'services/smpp/smpp_http_service.py',
       interpreter: '/var/www/sms-panel-app/sms-panel/sms-panel/venv/bin/python3',
+      interpreter_args: '-u',
       env: {
+        PYTHONPATH: '/var/www/sms-panel-app/sms-panel/sms-panel',
         SMPP_HOST: '114.199.74.35',
         SMPP_PORT: '2775',
         SMPP_SYSTEM_ID: 'XQB0213MKT',
