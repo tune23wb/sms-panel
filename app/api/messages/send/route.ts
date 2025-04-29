@@ -98,8 +98,8 @@ export async function POST(req: Request) {
     })
 
     // Path to Python script and virtual environment
-    const scriptPath = path.join(process.cwd(), 'services', 'smpp', 'smpp_service.py')
-    const venvPythonPath = path.join(process.cwd(), 'services', 'smpp', 'venv', 'bin', 'python3')
+    const scriptPath = '/var/www/sms-panel-app/sms-panel/sms-panel/services/smpp/smpp_service.py'
+    const venvPythonPath = '/var/www/sms-panel-app/sms-panel/sms-panel/services/smpp/venv/bin/python3'
     
     const pythonProcess = spawn(venvPythonPath, [
       scriptPath,
