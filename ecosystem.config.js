@@ -21,7 +21,7 @@ module.exports = {
     },
     {
       name: 'sms-panel-smp',
-      script: 'services/smpp/smpp_service.py',
+      script: 'services/smpp/smpp_http_service.py',
       interpreter: 'python3',
       env: {
         SMPP_HOST: '114.199.74.35',
