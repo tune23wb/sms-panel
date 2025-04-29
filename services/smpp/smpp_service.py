@@ -362,56 +362,27 @@ class SMPPService:
                 self.logger.error(f"Error while disconnecting: {str(e)}")
 
 def main():
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Send SMS via SMPP')
-    parser.add_argument('--destination', required=True, help='Destination phone number')
-    parser.add_argument('--message', required=True, help='Message content')
-    parser.add_argument('--source', default='45578', help='Sender ID')
-    parser.add_argument('--wait-for-delivery', action='store_true', help='Wait for delivery confirmation')
-    parser.add_argument('--delivery-timeout', type=int, default=15, help='Timeout for waiting for delivery (seconds)')
-    args = parser.parse_args()
-
-    # SMPP server settings
+    # SMPP server configuration
     SMPP_HOST = "114.199.74.35"
     SMPP_PORT = 2775
     SMPP_USERNAME = "XQB0213MKT"
     SMPP_PASSWORD = "fS5cgh26"
-
-    # Create service instance
-    smpp_service = SMPPService(SMPP_HOST, SMPP_PORT, SMPP_USERNAME, SMPP_PASSWORD)
     
-    try:
-        # Connect to server
-        if smpp_service.connect():
-            # Send message
-            success, message = smpp_service.send_message(
-                destination=args.destination,
-                message=args.message,
-                source_addr=args.source,
-                registered_delivery=True,  # Always request delivery receipt
-                wait_for_delivery=args.wait_for_delivery,
-                delivery_timeout=args.delivery_timeout
-            )
-            print(message)  # This will be captured by the Node.js process
-            sys.stdout.flush()  # Ensure output is sent immediately
-            sys.exit(0 if success else 1)
-        else:
-            print(json.dumps({
-                "status": "FAILED",
-                "error": "Failed to connect to SMPP server"
-            }))
-            sys.stdout.flush()
-            sys.exit(1)
-    except Exception as e:
-        print(json.dumps({
-            "status": "FAILED",
-            "error": str(e)
-        }))
-        sys.stdout.flush()
+    # Create and start SMPP service
+    service = SMPPService(SMPP_HOST, SMPP_PORT, SMPP_USERNAME, SMPP_PASSWORD)
+    
+    if service.connect():
+        service.start_listener()
+        
+        try:
+            # Keep the service running
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            service.stop_listener()
+            service.disconnect()
+    else:
         sys.exit(1)
-    finally:
-        # Always disconnect
-        smpp_service.disconnect()
 
 if __name__ == "__main__":
     main() 
