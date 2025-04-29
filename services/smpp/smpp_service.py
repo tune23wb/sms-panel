@@ -54,6 +54,10 @@ class SMPPService:
         self.listening = False
         self.listener_thread = None
         self.api_base_url = "http://64.23.163.161:3000/api"  # Use actual server IP instead of localhost
+        self.api_headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer smpp_internal_key'  # Internal API key for SMPP service
+        }
 
     def connect(self) -> bool:
         """Establish connection to SMPP server"""
@@ -210,6 +214,7 @@ class SMPPService:
             # Make an API call to update balance and message status
             response = requests.post(
                 api_url,
+                headers=self.api_headers,
                 json={
                     "message_id": message_id,
                     "status": status,
@@ -244,6 +249,7 @@ class SMPPService:
             # Get user's pricing tier from the API
             response = requests.get(
                 f"{self.api_base_url}/user/pricing-tier",
+                headers=self.api_headers,
                 timeout=5
             )
             

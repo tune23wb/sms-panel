@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+const INTERNAL_API_KEY = "smpp_internal_key"
+
 export async function POST(req: Request) {
   try {
+    // Check authorization
+    const authHeader = req.headers.get("authorization")
+    if (authHeader !== `Bearer ${INTERNAL_API_KEY}`) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
     const body = await req.json()
     const { message_id, status, phone_number, message_cost } = body
 
@@ -45,7 +56,10 @@ export async function POST(req: Request) {
       // Update message status
       const updatedMessage = await tx.message.update({
         where: { id: message_id },
-        data: { status }
+        data: { 
+          status,
+          updatedAt: new Date()
+        }
       })
 
       console.log("[BALANCE_UPDATE] Updated message status:", {
@@ -53,9 +67,9 @@ export async function POST(req: Request) {
         newStatus: updatedMessage.status
       })
 
-      let updatedUser = null
-      // Only deduct balance when status is SENT
-      if (status === "SENT") {
+      let updatedUser = message.user
+      // Only deduct balance when status is SENT and it wasn't already SENT
+      if (status === "SENT" && message.status !== "SENT") {
         console.log("[BALANCE_UPDATE] Deducting balance:", {
           userId: message.userId,
           amount: message_cost
@@ -94,7 +108,7 @@ export async function POST(req: Request) {
 
       return { 
         message: updatedMessage,
-        user: updatedUser || message.user
+        user: updatedUser
       }
     })
 
