@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { db } from "@/lib/db"
 import { Message, Transaction, User } from "@prisma/client"
+import axios from "axios"
 
 const PRICING_TIERS = {
   STANDARD: {
@@ -33,6 +34,25 @@ const PRICING_TIERS = {
     minVolume: 200000,
     maxVolume: 300000,
     pricePerSMS: 0.50
+  }
+}
+
+async function sendSMPPMessage(phoneNumber: string, message: string) {
+  try {
+    const response = await axios.post('http://64.23.163.161:3000/api/smpp/send', {
+      destination: phoneNumber,
+      message: message,
+      source_addr: "45578"
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer smpp_internal_key'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("[SMPP_SEND]", error);
+    throw error;
   }
 }
 
@@ -107,9 +127,35 @@ export async function POST(req: Request) {
           phoneNumber,
           content: messageContent,
           userId: user.id,
-          status: "SENT",
+          status: "PENDING", // Set initial status as PENDING
         }
       })
+
+      // Send message through SMPP
+      try {
+        const smppResult = await sendSMPPMessage(phoneNumber, messageContent);
+        
+        // Update message status based on SMPP result
+        if (smppResult.success) {
+          await tx.message.update({
+            where: { id: sentMessage.id },
+            data: { status: "SENT" }
+          });
+        } else {
+          await tx.message.update({
+            where: { id: sentMessage.id },
+            data: { status: "FAILED" }
+          });
+          throw new Error("Failed to send message through SMPP");
+        }
+      } catch (error) {
+        // If SMPP send fails, update message status and rollback balance
+        await tx.message.update({
+          where: { id: sentMessage.id },
+          data: { status: "FAILED" }
+        });
+        throw error;
+      }
 
       return { 
         message: sentMessage, 
