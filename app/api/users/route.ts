@@ -37,6 +37,9 @@ export async function GET() {
         role: true,
         status: true,
         lastActive: true,
+        balance: true,
+        company: true,
+        pricingTier: true
       },
       orderBy: {
         createdAt: 'desc'
