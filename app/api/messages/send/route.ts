@@ -99,12 +99,11 @@ export async function POST(req: Request) {
 
     // Path to Python script and virtual environment
     const scriptPath = '/var/www/sms-panel-app/sms-panel/sms-panel/services/smpp/smpp_service.py'
-    const venvPythonPath = '/var/www/sms-panel-app/sms-panel/sms-panel/services/smpp/venv/bin/python3'
-    
-    const pythonProcess = spawn(venvPythonPath, [
-      scriptPath,
-      '--destination', recipient,
-      '--message', content
+    const venvPath = '/var/www/sms-panel-app/sms-panel/sms-panel/services/smpp/venv'
+
+    const pythonProcess = spawn('bash', [
+      '-c',
+      `source ${venvPath}/bin/activate && ${venvPath}/bin/python3 ${scriptPath} --destination ${recipient} --message "${content}"`
     ])
 
     // Create a promise to handle the Python script execution
