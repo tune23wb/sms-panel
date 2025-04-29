@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { useState, useRef, useEffect, FormEvent } from "react"
 import { MoreHorizontal, Plus, Search, UserPlus } from "lucide-react"
 
@@ -44,7 +45,7 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/users')
+      const response = await fetch('/api/admin/users')
       if (!response.ok) {
         throw new Error('Failed to fetch users')
       }
