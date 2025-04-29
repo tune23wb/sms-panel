@@ -118,18 +118,22 @@ class SMPPService:
             self.logger.info(f"Message submitted successfully with ID: {self.message_id}")
             self.message_status = "SENT"
             
+            # Calculate message cost
+            message_cost = self.calculate_message_cost()
+            
             # Update balance when message is sent
             success, balance_result = self.update_balance(
                 message_id=self.message_id,
                 status="SENT",
                 phone_number=self.destination_number,
-                message_cost=self.calculate_message_cost()
+                message_cost=message_cost
             )
             
             result = {
                 "status": "SENT",
                 "message_id": self.message_id,
-                "balance_updated": success
+                "balance_updated": success,
+                "message_cost": message_cost
             }
             if success and "new_balance" in balance_result:
                 result["new_balance"] = balance_result["new_balance"]

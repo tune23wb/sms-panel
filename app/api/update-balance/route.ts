@@ -54,8 +54,8 @@ export async function POST(req: Request) {
       })
 
       let updatedUser = null
-      // If status is SENT, deduct balance
-      if (status === "SENT") {
+      // If status is SENT or DELIVERED, deduct balance
+      if (status === "SENT" || status === "DELIVERED") {
         console.log("[BALANCE_UPDATE] Deducting balance:", {
           userId: message.userId,
           amount: message_cost
