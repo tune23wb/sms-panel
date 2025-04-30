@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { hash } from "bcrypt"
+import { hash } from "bcryptjs"
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { userId: string } }
+) {
+  return NextResponse.json({ message: "Reset password endpoint" })
+}
 
 export async function POST(
   req: NextRequest,
