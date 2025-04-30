@@ -404,24 +404,51 @@ export default function UsersPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="first-name">First name</Label>
-                <Input id="first-name" name="first-name" required />
+                <Input 
+                  id="first-name" 
+                  name="first-name" 
+                  autoComplete="given-name"
+                  required 
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="last-name">Last name</Label>
-                <Input id="last-name" name="last-name" required />
+                <Input 
+                  id="last-name" 
+                  name="last-name" 
+                  autoComplete="family-name"
+                  required 
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" placeholder="client@example.com" required />
+              <Input 
+                id="email" 
+                name="email" 
+                type="email" 
+                placeholder="client@example.com" 
+                autoComplete="email"
+                required 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="company">Company</Label>
-              <Input id="company" name="company" />
+              <Input 
+                id="company" 
+                name="company" 
+                autoComplete="organization"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="initial-password">Initial Password</Label>
-              <Input id="initial-password" name="initial-password" type="password" required />
+              <Input 
+                id="initial-password" 
+                name="initial-password" 
+                type="password" 
+                autoComplete="new-password"
+                required 
+              />
               <p className="text-xs text-muted-foreground">
                 The client will be prompted to change this password on first login
               </p>
