@@ -277,6 +277,8 @@ export default function SendBulkSMSPage() {
                                 <Textarea
                                   placeholder="Enter phone numbers separated by commas or new lines"
                                   className="h-20"
+                                  id="manual-numbers"
+                                  autoComplete="off"
                                   {...field}
                                 />
                               </FormControl>
@@ -315,6 +317,7 @@ export default function SendBulkSMSPage() {
                           onChange={handleFileUpload}
                           className="hidden"
                           id="file-upload"
+                          name="file-upload"
                         />
                         <div className="space-y-4">
                           <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
@@ -384,6 +387,8 @@ export default function SendBulkSMSPage() {
                       <Textarea
                         placeholder="Hello {name}, this is your message..."
                         className="h-32"
+                        id="message-template"
+                        autoComplete="off"
                         {...field}
                       />
                     </FormControl>
