@@ -18,7 +18,9 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import { ViewUserDialog, EditUserDialog, ResetPasswordDialog } from "@/components/dialogs"
+import { ViewUserDialog } from "@/app/components/dialogs/ViewUserDialog"
+import { EditUserDialog } from "@/app/components/dialogs/EditUserDialog"
+import { ResetPasswordDialog } from "@/app/components/dialogs/ResetPasswordDialog"
 
 interface User {
   id: string
@@ -293,96 +295,50 @@ export default function UsersPage() {
                       <TableCell>{user.email}</TableCell>
                       <TableCell>{user.role}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`h-2 w-2 rounded-full ${
-                              user.status === "Active"
-                                ? "bg-green-500"
-                                : user.status === "Inactive"
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
-                            }`}
-                          ></div>
-                          <span>{user.status}</span>
-                        </div>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.status === 'Active' ? 'bg-green-100 text-green-800' :
+                          user.status === 'Inactive' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {user.status}
+                        </span>
                       </TableCell>
                       <TableCell>
                         ${user.balance?.toFixed(2) || "0.00"}
                       </TableCell>
-                      <TableCell>{user.lastActive}</TableCell>
+                      <TableCell>{new Date(user.lastActive).toLocaleString()}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
                               <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Actions</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onSelect={(e) => {
-                              e.preventDefault()
-                              setSelectedUser(user)
-                              setViewDetailsOpen(true)
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedUser(user);
+                              setViewDetailsOpen(true);
                             }}>
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={(e) => {
-                              e.preventDefault()
-                              setSelectedUser(user)
-                              setEditUserOpen(true)
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedUser(user);
+                              setEditUserOpen(true);
                             }}>
                               Edit User
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={(e) => {
-                              e.preventDefault()
-                              const amount = window.prompt("Enter amount to credit:")
-                              if (amount && !isNaN(Number(amount)) && Number(amount) > 0) {
-                                handleUpdateBalance(user.id, "CREDIT", Number(amount))
-                              }
-                            }}>
-                              Add Balance
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={(e) => {
-                              e.preventDefault()
-                              const amount = window.prompt("Enter amount to debit:")
-                              if (amount && !isNaN(Number(amount)) && Number(amount) > 0) {
-                                handleUpdateBalance(user.id, "DEBIT", Number(amount))
-                              }
-                            }}>
-                              Deduct Balance
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={(e) => {
-                              e.preventDefault()
-                              setSelectedUser(user)
-                              setResetPasswordOpen(true)
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedUser(user);
+                              setResetPasswordOpen(true);
                             }}>
                               Reset Password
                             </DropdownMenuItem>
-                            {user.status === "Active" ? (
-                              <DropdownMenuItem onSelect={(e) => {
-                                e.preventDefault()
-                                handleStatusChange(user.id, "Suspended")
-                              }}>
-                                Suspend User
-                              </DropdownMenuItem>
-                            ) : user.status === "Suspended" ? (
-                              <DropdownMenuItem onSelect={(e) => {
-                                e.preventDefault()
-                                handleStatusChange(user.id, "Active")
-                              }}>
-                                Activate User
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem onSelect={(e) => {
-                                e.preventDefault()
-                                handleStatusChange(user.id, "Active")
-                              }}>
-                                Activate User
-                              </DropdownMenuItem>
-                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleStatusChange(user.id, user.status === 'Active' ? 'Suspended' : 'Active')}>
+                              {user.status === 'Active' ? 'Suspend User' : 'Activate User'}
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
