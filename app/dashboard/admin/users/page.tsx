@@ -320,20 +320,23 @@ export default function UsersPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => {
+                            <DropdownMenuItem onSelect={(e) => {
+                              e.preventDefault()
                               setSelectedUser(user)
                               setViewDetailsOpen(true)
                             }}>
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
+                            <DropdownMenuItem onSelect={(e) => {
+                              e.preventDefault()
                               setSelectedUser(user)
                               setEditUserOpen(true)
                             }}>
                               Edit User
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => {
+                            <DropdownMenuItem onSelect={(e) => {
+                              e.preventDefault()
                               const amount = window.prompt("Enter amount to credit:")
                               if (amount && !isNaN(Number(amount)) && Number(amount) > 0) {
                                 handleUpdateBalance(user.id, "CREDIT", Number(amount))
@@ -341,7 +344,8 @@ export default function UsersPage() {
                             }}>
                               Add Balance
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
+                            <DropdownMenuItem onSelect={(e) => {
+                              e.preventDefault()
                               const amount = window.prompt("Enter amount to debit:")
                               if (amount && !isNaN(Number(amount)) && Number(amount) > 0) {
                                 handleUpdateBalance(user.id, "DEBIT", Number(amount))
@@ -350,22 +354,32 @@ export default function UsersPage() {
                               Deduct Balance
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => {
+                            <DropdownMenuItem onSelect={(e) => {
+                              e.preventDefault()
                               setSelectedUser(user)
                               setResetPasswordOpen(true)
                             }}>
                               Reset Password
                             </DropdownMenuItem>
                             {user.status === "Active" ? (
-                              <DropdownMenuItem onClick={() => handleStatusChange(user.id, "Suspended")}>
+                              <DropdownMenuItem onSelect={(e) => {
+                                e.preventDefault()
+                                handleStatusChange(user.id, "Suspended")
+                              }}>
                                 Suspend User
                               </DropdownMenuItem>
                             ) : user.status === "Suspended" ? (
-                              <DropdownMenuItem onClick={() => handleStatusChange(user.id, "Active")}>
+                              <DropdownMenuItem onSelect={(e) => {
+                                e.preventDefault()
+                                handleStatusChange(user.id, "Active")
+                              }}>
                                 Activate User
                               </DropdownMenuItem>
                             ) : (
-                              <DropdownMenuItem onClick={() => handleStatusChange(user.id, "Active")}>
+                              <DropdownMenuItem onSelect={(e) => {
+                                e.preventDefault()
+                                handleStatusChange(user.id, "Active")
+                              }}>
                                 Activate User
                               </DropdownMenuItem>
                             )}
