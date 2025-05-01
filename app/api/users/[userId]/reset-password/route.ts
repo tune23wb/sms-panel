@@ -3,6 +3,11 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { hash } from "bcryptjs"
 
+// Add GET handler to prevent build error
+export async function GET() {
+  return NextResponse.json({ message: "Method not allowed" }, { status: 405 })
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { userId: string } }
