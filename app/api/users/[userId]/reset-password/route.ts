@@ -3,8 +3,13 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { hash } from "bcryptjs"
 
+export const dynamic = 'force-dynamic'
+
 // Add GET handler to prevent build error
-export async function GET() {
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { userId: string } }
+) {
   return NextResponse.json({ message: "Method not allowed" }, { status: 405 })
 }
 
