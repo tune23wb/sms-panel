@@ -33,12 +33,12 @@ export function ResetPasswordDialog({ open, onOpenChange, userId }: ResetPasswor
 
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/api/users/${userId}/reset-password`, {
+      const response = await fetch(`/api/admin/users/${userId}/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ password: newPassword }),
+        body: JSON.stringify({ newPassword }),
       })
 
       if (!response.ok) {
