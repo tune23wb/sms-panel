@@ -32,6 +32,8 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
     company: user?.company || "",
     pricingTier: user?.pricingTier || "standard"
   })
+  const [balanceAmount, setBalanceAmount] = useState("")
+  const [balanceType, setBalanceType] = useState<"CREDIT" | "DEBIT">("CREDIT")
 
   React.useEffect(() => {
     if (user) {
@@ -41,6 +43,8 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
         company: user.company || "",
         pricingTier: user.pricingTier || "standard"
       })
+      setBalanceAmount("")
+      setBalanceType("CREDIT")
     }
   }, [user])
 
@@ -50,7 +54,7 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
 
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/api/users/${user.id}`, {
+      const response = await fetch(`/api/admin/users/${user.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -74,6 +78,51 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
       toast({
         title: "Error",
         description: "Failed to update user. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleBalanceUpdate = async () => {
+    if (!user || !balanceAmount) return
+
+    setIsSubmitting(true)
+    try {
+      const amount = parseFloat(balanceAmount)
+      if (isNaN(amount) || amount <= 0) {
+        throw new Error('Please enter a valid amount greater than 0')
+      }
+
+      const response = await fetch(`/api/admin/users/${user.id}/balance`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: balanceType,
+          amount: amount,
+          description: `Balance ${balanceType.toLowerCase()}ed by admin`
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update balance')
+      }
+
+      toast({
+        title: "Success",
+        description: `Balance ${balanceType.toLowerCase()}ed successfully`,
+      })
+
+      setBalanceAmount("")
+      onUserUpdated()
+    } catch (error) {
+      console.error('Error updating balance:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update balance",
         variant: "destructive",
       })
     } finally {
@@ -135,6 +184,50 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
                   <SelectItem value="platinum">Platinum</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="border-t pt-4">
+              <div className="mb-4">
+                <h4 className="text-sm font-medium">Balance Management</h4>
+                <p className="text-sm text-muted-foreground">Current balance: ${user.balance?.toFixed(2) || "0.00"}</p>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="balanceAmount" className="text-right">Amount</Label>
+                <Input
+                  id="balanceAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={balanceAmount}
+                  onChange={(e) => setBalanceAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 mt-2">
+                <Label className="text-right">Type</Label>
+                <Select
+                  value={balanceType}
+                  onValueChange={(value: "CREDIT" | "DEBIT") => setBalanceType(value)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CREDIT">Credit (Add)</SelectItem>
+                    <SelectItem value="DEBIT">Debit (Subtract)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="mt-2 text-right">
+                <Button 
+                  type="button"
+                  onClick={handleBalanceUpdate}
+                  disabled={isSubmitting || !balanceAmount}
+                  variant="secondary"
+                >
+                  Update Balance
+                </Button>
+              </div>
             </div>
           </div>
           <DialogFooter>
