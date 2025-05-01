@@ -20,7 +20,6 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { ViewUserDialog } from "@/app/components/dialogs/ViewUserDialog"
 import { EditUserDialog } from "@/app/components/dialogs/EditUserDialog"
-import { ResetPasswordDialog } from "@/app/components/dialogs/ResetPasswordDialog"
 
 interface User {
   id: string
@@ -41,7 +40,6 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false)
   const [editUserOpen, setEditUserOpen] = useState(false)
-  const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
   const createClientFormRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -329,12 +327,6 @@ export default function UsersPage() {
                             }}>
                               Edit User
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedUser(user);
-                              setResetPasswordOpen(true);
-                            }}>
-                              Reset Password
-                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleStatusChange(user.id, user.status === 'Active' ? 'Suspended' : 'Active')}>
                               {user.status === 'Active' ? 'Suspend User' : 'Activate User'}
@@ -447,11 +439,6 @@ export default function UsersPage() {
             open={editUserOpen}
             onOpenChange={setEditUserOpen}
             onUserUpdated={fetchUsers}
-          />
-          <ResetPasswordDialog
-            userId={selectedUser.id}
-            open={resetPasswordOpen}
-            onOpenChange={setResetPasswordOpen}
           />
         </>
       )}
