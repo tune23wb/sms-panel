@@ -1,31 +1,31 @@
-import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
 
-import { prisma } from "@/lib/prisma"
-import { authOptions } from "@/lib/auth"
-
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    
+    // First check if we have a session and user
+    if (!session?.user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
-      )
+      );
     }
 
-    // Check if user is admin
-    const user = await prisma.user.findUnique({
-      where: { email: session.user?.email as string },
+    // Then verify if the user is an admin
+    const admin = await prisma.user.findUnique({
+      where: { email: session.user.email! },
       select: { role: true }
-    })
+    });
 
-    if (user?.role !== "ADMIN") {
+    if (admin?.role !== "ADMIN") {
       return NextResponse.json(
-        { error: "Forbidden" },
+        { error: "Forbidden - Admin access required" },
         { status: 403 }
-      )
+      );
     }
 
     // Fetch all users
@@ -44,14 +44,14 @@ export async function GET() {
       orderBy: {
         createdAt: 'desc'
       }
-    })
+    });
 
-    return NextResponse.json({ users })
+    return NextResponse.json({ users });
   } catch (error) {
-    console.error('Error fetching users:', error)
+    console.error('Error fetching users:', error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
-    )
+    );
   }
 } 
