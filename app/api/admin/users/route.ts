@@ -5,6 +5,7 @@ import { z } from "zod"
 import { Prisma } from "@prisma/client"
 
 import { prisma } from "@/lib/prisma"
+import { authOptions } from "@/lib/auth"
 
 // Create a schema for input validation
 const createUserSchema = z.object({
@@ -16,12 +17,65 @@ const createUserSchema = z.object({
   pricingTier: z.string(),
 })
 
-export async function POST(req: Request) {
+async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    // First check if we have a session and user
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Then verify if the user is an admin
+    const admin = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+      select: { role: true }
+    });
+
+    if (admin?.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Forbidden - Admin access required" },
+        { status: 403 }
+      );
+    }
+
+    // Fetch all users
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        lastActive: true,
+        balance: true,
+        company: true,
+        pricingTier: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return NextResponse.json({ users });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+async function POST(req: Request) {
   try {
     console.log('Received user creation request')
     
     // Check if the user is authenticated and is an admin
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     console.log('Session:', session)
     
     if (!session?.user) {
@@ -128,4 +182,6 @@ export async function POST(req: Request) {
       { status: 500 }
     )
   }
-} 
+}
+
+export { GET, POST }; 
