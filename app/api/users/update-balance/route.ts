@@ -1,13 +1,42 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { Prisma, PrismaClient } from "@prisma/client";
+
+export async function GET(req: Request) {
+  try {
+    const session = await auth();
+    
+    if (!session || session.user.role !== "ADMIN") {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return new NextResponse("User ID is required", { status: 400 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { balance: true }
+    });
+
+    if (!user) {
+      return new NextResponse("User not found", { status: 404 });
+    }
+
+    return NextResponse.json({ balance: user.balance });
+  } catch (error) {
+    console.error("[GET_USER_BALANCE]", error);
+    return new NextResponse("Internal Error", { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   try {
     const session = await auth();
     
-    // Check if user is authenticated and is an admin
     if (!session || session.user.role !== "ADMIN") {
       return new NextResponse("Unauthorized", { status: 401 });
     }
@@ -19,35 +48,31 @@ export async function POST(req: Request) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
-    // Start a transaction to ensure both balance update and transaction record are created
-    const result = await prisma.$transaction(async (tx) => {
-      // Update user balance
-      const updatedUser = await tx.user.update({
-        where: { id: userId },
-        data: {
-          balance: {
-            increment: amount
-          }
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        balance: {
+          increment: amount
         }
-      });
-
-      // Create transaction record
-      const transaction = await tx.transaction.create({
-        data: {
-          type: amount > 0 ? "CREDIT" : "DEBIT",
-          amount: Math.abs(amount),
-          description,
-          userId,
-          status: "COMPLETED"
-        }
-      });
-
-      return { user: updatedUser, transaction };
+      }
     });
 
-    return NextResponse.json(result);
+    const transaction = await prisma.transaction.create({
+      data: {
+        type: amount > 0 ? "CREDIT" : "DEBIT",
+        amount: Math.abs(amount),
+        description,
+        userId,
+        status: "COMPLETED"
+      }
+    });
+
+    return NextResponse.json({
+      user: updatedUser,
+      transaction
+    });
   } catch (error) {
-    console.error("[USERS_UPDATE_BALANCE]", error);
+    console.error("[UPDATE_USER_BALANCE]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
-} 
+}
