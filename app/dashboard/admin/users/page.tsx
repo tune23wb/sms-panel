@@ -154,7 +154,7 @@ export default function UsersPage() {
       const email = formData.get('email') as string
       const company = formData.get('company') as string
       const password = formData.get('initial-password') as string
-      const balance = Number(formData.get('balance')) || 500
+      const balance = Number(formData.get('balance')) || 0
       const pricingTier = formData.get('pricing-tier') as string
 
       console.log('Submitting form data:', {
@@ -184,12 +184,10 @@ export default function UsersPage() {
       console.log('Server response:', data)
 
       if (!response.ok) {
-        // Show specific error messages for known error cases
         if (response.status === 400 && data.error === "User with this email already exists") {
           throw new Error(`A user with the email ${email} already exists. Please use a different email address.`)
         }
         
-        // For other errors, use the server's error message if available
         let errorMessage = data.error || 'Failed to create user'
         if (data.details) {
           errorMessage += `: ${data.details}`
@@ -202,8 +200,10 @@ export default function UsersPage() {
         description: "New client account created successfully",
       })
 
-      // Reset form
-      e.currentTarget.reset()
+      // Reset form with null check
+      if (e.currentTarget) {
+        e.currentTarget.reset()
+      }
       
       // Refresh user list
       await fetchUsers()
@@ -403,7 +403,7 @@ export default function UsersPage() {
             </div>
             <div className="space-y-2">
               <Label>Initial Balance (MXN)</Label>
-              <Input type="number" name="balance" defaultValue={500} min={0} step={100} />
+              <Input type="number" name="balance" defaultValue={0} min={0} step={0.01} />
               <p className="text-xs text-muted-foreground">Initial balance in Mexican Pesos (MXN)</p>
             </div>
             <div className="space-y-2">
