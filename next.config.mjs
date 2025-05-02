@@ -9,6 +9,22 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/:path*',
+          has: [
+            {
+              type: 'host',
+              value: 'quantumhub.mx',
+            },
+          ],
+          destination: '/:path*',
+        },
+      ],
+    }
+  },
 }
 
 export default nextConfig
