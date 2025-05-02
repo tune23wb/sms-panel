@@ -38,7 +38,7 @@ def test_sms():
             success, message = smpp_service.send_message(
                 destination=TEST_NUMBER,
                 message=TEST_MESSAGE,
-                source_addr="45578",
+                source_addr="82833",
                 registered_delivery=True  # Enable delivery receipt
             )
             
