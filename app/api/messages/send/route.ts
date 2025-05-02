@@ -96,60 +96,112 @@ export async function POST(req: Request) {
     })
 
     // Send message through SMPP HTTP service
-    const smppResponse = await fetch('http://localhost:3001/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        destination: recipient,
-        message: content,
-        source_addr: "45578"
-      })
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000; // 1 second
+
+    let lastError;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const smppResponse = await fetch(process.env.SMPP_SERVICE_URL || 'http://localhost:3001/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            destination: recipient,
+            message: content,
+            source_addr: "45578"
+          })
+        });
+
+        if (!smppResponse.ok) {
+          const errorText = await smppResponse.text();
+          console.error(`[SMPP_ERROR] Attempt ${attempt}/${MAX_RETRIES}`, {
+            status: smppResponse.status,
+            statusText: smppResponse.statusText,
+            error: errorText
+          });
+          lastError = new Error(`SMPP service error: ${smppResponse.status} - ${errorText}`);
+          
+          if (attempt < MAX_RETRIES) {
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            continue;
+          }
+          throw lastError;
+        }
+
+        const smppResult = await smppResponse.json();
+        if (!smppResult.success) {
+          lastError = new Error(smppResult.error || "Failed to send SMS");
+          if (attempt < MAX_RETRIES) {
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            continue;
+          }
+          throw lastError;
+        }
+
+        // If we get here, the message was sent successfully
+        await prisma.message.update({
+          where: { id: result.message.id },
+          data: { 
+            status: "SENT",
+            updatedAt: new Date()
+          }
+        });
+
+        await prisma.transaction.update({
+          where: { id: result.transaction.id },
+          data: { 
+            status: "COMPLETED",
+            updatedAt: new Date()
+          }
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: result.message,
+          transaction: result.transaction,
+          remainingBalance: result.user.balance
+        });
+      } catch (error) {
+        // Log the error with details
+        console.error(`[SMS_SEND][Attempt ${attempt}]`, {
+          error: error instanceof Error ? error.message : error,
+          stack: error instanceof Error ? error.stack : undefined,
+          attempt,
+          recipient,
+          content,
+          smppUrl: process.env.SMPP_SERVICE_URL
+        });
+        lastError = error;
+        if (attempt < MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+          continue;
+        }
+      }
+    }
+
+    // If we get here, all retries failed
+    await prisma.message.update({
+      where: { id: result.message.id },
+      data: { 
+        status: "FAILED",
+        updatedAt: new Date()
+      }
     });
 
-    if (!smppResponse.ok) {
-      throw new Error(`SMPP service returned ${smppResponse.status}`);
-    }
-
-    const smppResult = await smppResponse.json();
-
-    // Update message status based on SMPP result
-    if (smppResult.success) {
-      await prisma.message.update({
-        where: { id: result.message.id },
-        data: { 
-          status: "SENT",
-          updatedAt: new Date()
-        }
-      });
-
-      await prisma.transaction.update({
-        where: { id: result.transaction.id },
-        data: { 
-          status: "COMPLETED",
-          updatedAt: new Date()
-        }
-      });
-    } else {
-      await prisma.message.update({
-        where: { id: result.message.id },
-        data: { 
-          status: "FAILED",
-          updatedAt: new Date()
-        }
-      });
-      throw new Error(smppResult.error || "Failed to send SMS");
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: result.message,
-      transaction: result.transaction,
-      remainingBalance: result.user.balance
-    })
+    throw lastError;
   } catch (error) {
     console.error("[SMS_SEND]", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    if (error instanceof Error) {
+      return NextResponse.json({ 
+        error: error.message,
+        details: error.stack
+      }, { status: 500 })
+    }
+    return NextResponse.json({ 
+      error: "Internal server error",
+      details: String(error)
+    }, { status: 500 })
   }
 } 
