@@ -24,12 +24,14 @@ def test_sms():
     TEST_MESSAGE = "Hello, this is a test SMS"  # Simple test message
     
     logging.info(f"Connecting to SMPP server at {SMPP_HOST}:{SMPP_PORT}")
+    logging.info(f"Using credentials - System ID: {SMPP_USERNAME}")
     
     # Create service instance
     smpp_service = SMPPService(SMPP_HOST, SMPP_PORT, SMPP_USERNAME, SMPP_PASSWORD)
     
     try:
         # Connect to server
+        logging.info("Attempting to connect to SMPP server...")
         if smpp_service.connect():
             logging.info("Successfully connected to SMPP server")
             
@@ -52,6 +54,7 @@ def test_sms():
             logging.error("Failed to connect to SMPP server")
     except Exception as e:
         logging.error(f"Error during test: {e}")
+        logging.exception("Full error traceback:")
     finally:
         # Always disconnect
         smpp_service.disconnect()
