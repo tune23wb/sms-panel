@@ -103,7 +103,7 @@ class SMPPService:
             try:
                 self.client.listen(0.5)
             except Exception as e:
-                self.logger.error(f"Error in listener loop: {str(e)}")
+                self.logger.error(f"Error in listener loop: {str(e)}", exc_info=True)
                 time.sleep(0.1)
 
     def stop_listener(self):
@@ -276,7 +276,7 @@ class SMPPService:
     def send_message(self, 
                     destination: str, 
                     message: str, 
-                    source_addr: str = "45578",
+                    source_addr: str = "82833",
                     registered_delivery: bool = True,
                     wait_for_delivery: bool = True,
                     delivery_timeout: int = 15) -> Tuple[bool, str]:
