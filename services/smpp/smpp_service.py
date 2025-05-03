@@ -118,7 +118,11 @@ class SMPPService:
         """Handle message sent confirmation"""
         self.logger.info(f"Message sent PDU: {pdu}")
         if pdu.command == "submit_sm_resp":
-            self.message_id = str(pdu.message_id)
+            # Properly decode message_id if it's bytes
+            if isinstance(pdu.message_id, bytes):
+                self.message_id = pdu.message_id.decode()
+            else:
+                self.message_id = str(pdu.message_id)
             self.logger.info(f"Message submitted successfully with ID: {self.message_id}")
             self.message_status = "SENT"
             
@@ -149,7 +153,10 @@ class SMPPService:
         """Extract message ID from various PDU formats"""
         message_id = None
         if hasattr(pdu, 'receipted_message_id'):
-            message_id = str(pdu.receipted_message_id)
+            if isinstance(pdu.receipted_message_id, bytes):
+                message_id = pdu.receipted_message_id.decode()
+            else:
+                message_id = str(pdu.receipted_message_id)
         elif hasattr(pdu, 'short_message'):
             short_message = str(pdu.short_message)
             id_match = re.search(r'id:([^ ]+)', short_message)
@@ -199,8 +206,11 @@ class SMPPService:
                     sys.stdout.flush()
                     self.delivery_event.set()  # Signal that delivery receipt received
                 
-                # Always acknowledge receipt
-                self.client.deliver_sm_resp(pdu.sequence)
+                # Acknowledge receipt properly
+                try:
+                    pdu.require_ack = True
+                except AttributeError:
+                    self.logger.warning("Could not set require_ack on PDU")
 
     def update_balance(self, message_id, status, phone_number, message_cost=1.0):
         """
