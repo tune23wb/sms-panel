@@ -19,10 +19,10 @@ logger = logging.getLogger('SMPPHTTPService')
 
 # Initialize SMPP service
 smpp_service = SMPPService(
-    host=os.getenv('SMPP_HOST', '114.199.74.35'),
-    port=int(os.getenv('SMPP_PORT', '2775')),
-    username=os.getenv('SMPP_SYSTEM_ID', 'XQB0213MKT'),
-    password=os.getenv('SMPP_PASSWORD', 'fS5cgh26')
+    host=os.getenv('SMPP_HOST', '43.249.30.190'),
+    port=int(os.getenv('SMPP_PORT', '20002')),
+    username=os.getenv('SMPP_SYSTEM_ID', '0159-C0082'),
+    password=os.getenv('SMPP_PASSWORD', '4DA88FD7')
 )
 
 @app.route('/send', methods=['POST'])

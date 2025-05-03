@@ -12,10 +12,10 @@ import smpplib.consts
 logging.basicConfig(level=logging.INFO)
 
 # SMPP server settings
-SMPP_HOST = "114.199.74.35"
-SMPP_PORT = 2775
-SMPP_USERNAME = "XQB0213MKT"
-SMPP_PASSWORD = "fS5cgh26"
+SMPP_HOST = "43.249.30.190"
+SMPP_PORT = 20002
+SMPP_USERNAME = "0159-C0082"
+SMPP_PASSWORD = "4DA88FD7"
 
 # Test settings
 TEST_SOURCE_ADDR = "TestSMPP"  # This will be displayed as the sender
