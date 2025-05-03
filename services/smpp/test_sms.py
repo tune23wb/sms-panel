@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import logging
-from smpp_service import SMPPService
+from .smpp_service import SMPPService
 from datetime import datetime
 import time
 import smpplib.client

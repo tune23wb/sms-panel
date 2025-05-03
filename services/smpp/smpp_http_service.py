@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from flask import Flask, request, jsonify
 import os
-from smpp_service import SMPPService
+from .smpp_service import SMPPService
 import logging
 from logging.handlers import RotatingFileHandler
 
