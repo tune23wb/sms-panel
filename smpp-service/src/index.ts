@@ -47,7 +47,9 @@ const client = new Client({
 // Connection state tracking
 let isConnected = false;
 let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
+
+// Add message queue
+const messageQueue: Array<{ destination: string; message: string; source_addr: string }> = [];
 
 // Connection event handlers
 client.on('connect', () => {
@@ -62,6 +64,24 @@ client.on('connect', () => {
   }, (pdu) => {
     if (pdu.command_status === 0) {
       console.log('Successfully bound to SMPP server');
+      // Process message queue on successful bind
+      while (messageQueue.length > 0) {
+        const msg = messageQueue.shift();
+        if (msg) {
+          client.submit_sm({
+            source_addr: msg.source_addr,
+            destination_addr: msg.destination,
+            short_message: msg.message,
+            registered_delivery: 1
+          }, (pdu) => {
+            if (pdu.command_status === 0) {
+              console.log('Queued message sent successfully:', pdu.message_id);
+            } else {
+              console.error('Failed to send queued message:', pdu.command_status);
+            }
+          });
+        }
+      }
     } else {
       console.error('Failed to bind to SMPP server:', pdu.command_status);
       client.close();
@@ -72,16 +92,11 @@ client.on('connect', () => {
 client.on('close', () => {
   console.log('Connection to SMPP server closed');
   isConnected = false;
-  
-  if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-    reconnectAttempts++;
-    console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
-    setTimeout(() => {
-      client.connect();
-    }, 5000);
-  } else {
-    console.error('Max reconnection attempts reached. Please check SMPP server status.');
-  }
+  reconnectAttempts++;
+  console.log(`Attempting to reconnect (${reconnectAttempts})...`);
+  setTimeout(() => {
+    client.connect();
+  }, 5000);
 });
 
 client.on('error', (error) => {
@@ -122,9 +137,11 @@ app.post('/send', async (req: Request, res: Response) => {
   }
 
   if (!isConnected) {
-    return res.status(503).json({
-      success: false,
-      error: 'SMPP service is not connected'
+    // Queue the message if not connected
+    messageQueue.push({ destination, message, source_addr });
+    return res.status(202).json({
+      success: true,
+      message: 'Message queued for sending when connection is restored'
     });
   }
 
@@ -134,7 +151,7 @@ app.post('/send', async (req: Request, res: Response) => {
         source_addr: source_addr,
         destination_addr: destination,
         short_message: message,
-        registered_delivery: 1 // Request delivery report
+        registered_delivery: 1
       }, (pdu) => {
         if (pdu.command_status === 0) {
           resolve(pdu);
