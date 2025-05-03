@@ -123,6 +123,11 @@ class SMPPService:
                 self.message_id = pdu.message_id.decode()
             else:
                 self.message_id = str(pdu.message_id)
+            
+            # Add timestamp to make message ID unique and match backend format
+            timestamp = int(time.time() * 1000)
+            self.message_id = f"{timestamp}{self.message_id}"
+            
             self.logger.info(f"Message submitted successfully with ID: {self.message_id}")
             self.message_status = "SENT"
             

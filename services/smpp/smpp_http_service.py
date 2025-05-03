@@ -3,14 +3,19 @@ from flask import Flask, request, jsonify
 import os
 from smpp_service import SMPPService
 import logging
+from logging.handlers import RotatingFileHandler
 
-# Set up logging
+# Set up logging with rotation
+log_file = 'smpp_service.log'
+max_bytes = 10 * 1024 * 1024  # 10MB
+backup_count = 5
+
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,  # Changed to INFO for production
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('smpp_service.log')
+        RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
     ]
 )
 
@@ -74,5 +79,6 @@ def health_check():
     return jsonify({'status': 'healthy'})
 
 if __name__ == '__main__':
+    # For development only - in production, use gunicorn
     port = int(os.getenv('PORT', 3001))
-    app.run(host='0.0.0.0', port=port) 
+    app.run(host='127.0.0.1', port=port, debug=False)  # Only bind to localhost in development 
