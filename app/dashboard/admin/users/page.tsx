@@ -154,7 +154,8 @@ export default function UsersPage() {
       const email = formData.get('email') as string
       const company = formData.get('company') as string
       const password = formData.get('initial-password') as string
-      const balance = Number(formData.get('balance')) || 0
+      const balanceRaw = formData.get('balance');
+      const balance = balanceRaw !== null && balanceRaw !== '' ? Number(balanceRaw) : 0;
       const pricingTier = formData.get('pricing-tier') as string
 
       console.log('Submitting form data:', {
