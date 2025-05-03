@@ -22,7 +22,8 @@ module.exports = {
     {
       name: 'sms-panel-smp',
       script: 'gunicorn',
-      args: 'services.smpp.smpp_http_service:app -b 0.0.0.0:3001 --workers 2 --timeout 120',
+      args: 'services.smpp.smpp_http_service:app -b 0.0.0.0:3001 --workers 2 --timeout 120 --log-level debug',
+      cwd: '/var/www/sms-panel-app/sms-panel/sms-panel',
       interpreter: '/var/www/sms-panel-app/sms-panel/sms-panel/venv/bin/python3',
       env: {
         PYTHONPATH: '/var/www/sms-panel-app/sms-panel/sms-panel',
